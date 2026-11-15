@@ -1,0 +1,62 @@
+From b0f9eec62fad3fe4240918a1d701951a09e34cd7 Mon Sep 17 00:00:00 2001
+From: AUTHOR <author@example.invalid>
+Date: Sun, 15 Nov 2026 13:23:58 +0300
+Subject: [PATCH 4/4] Sound session: start from a disc the embedder vouches for
+ (unused unless called)
+
+FGameSoundSession::Start(Disc, Vouched) takes the identity the embedder recognized the disc as, for a
+translation's copy of a playable release whose program IdentifyDisc does not know (its sound files are
+the release's). Start(Disc) is unchanged: IdentifyDisc, then the same. Nothing in Weltall calls the new
+overload.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+---
+ Source/WeltallCore/Private/Sound/GameSoundSession.cpp | 6 ++++++
+ Source/WeltallCore/Public/Sound/GameSoundSession.h    | 7 +++++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/Source/WeltallCore/Private/Sound/GameSoundSession.cpp b/Source/WeltallCore/Private/Sound/GameSoundSession.cpp
+index 73d0208..f45230a 100644
+--- a/Source/WeltallCore/Private/Sound/GameSoundSession.cpp
++++ b/Source/WeltallCore/Private/Sound/GameSoundSession.cpp
+@@ -28,6 +28,12 @@ namespace Weltall
+ 		{
+ 			return Identity.Error();
+ 		}
++		return Start(Disc, *Identity);
++	}
++
++	TResult<std::unique_ptr<FGameSoundSession>> FGameSoundSession::Start(const FIso9660& Disc, const FDiscIdentity& Vouched)
++	{
++		const FDiscIdentity* Identity = &Vouched;
+ 		if (!IsPlayableRelease(Identity->Release))
+ 		{
+ 			return MakeError("playing requires a USA or supported undub disc");
+diff --git a/Source/WeltallCore/Public/Sound/GameSoundSession.h b/Source/WeltallCore/Public/Sound/GameSoundSession.h
+index cb04ca5..70354eb 100644
+--- a/Source/WeltallCore/Public/Sound/GameSoundSession.h
++++ b/Source/WeltallCore/Public/Sound/GameSoundSession.h
+@@ -1,6 +1,7 @@
+ #pragma once
+ 
+ #include "Foundation/Result.h"
++#include "Media/DiscIdentification.h"
+ #include "Media/GameFileIndex.h"
+ #include "Sound/FieldGameSound.h"
+ #include "Sound/FieldMusic.h"
+@@ -36,6 +37,12 @@ namespace Weltall
+ 	{
+ 	public:
+ 		WELTALLCORE_API static TResult<std::unique_ptr<FGameSoundSession>> Start(const FIso9660& Disc);
++		/**
++		 * The same from a disc its embedder has recognized itself as Vouched, which IdentifyDisc does not know (a
++		 * translation's copy of a playable release whose program it changed, its sound files the release's): the
++		 * identity is taken as given. Start(Disc) is this with IdentifyDisc's identity; nothing else calls it.
++		 */
++		WELTALLCORE_API static TResult<std::unique_ptr<FGameSoundSession>> Start(const FIso9660& Disc, const FDiscIdentity& Vouched);
+ 
+ 		WELTALLCORE_API ~FGameSoundSession();
+ 		FGameSoundSession(const FGameSoundSession&) = delete;
+-- 
+2.48.1.windows.1
+

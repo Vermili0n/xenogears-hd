@@ -1,0 +1,28 @@
+# Weltall is its own git clone (tag v1.0.3, local branch xeno-local); game discs live in weltall/Games (ignored there)
+/weltall/
+# Build output and game-derived data
+build/
+out/
+*.bin
+*.cue
+*.chd
+*.jsonl
+# Godot cache
+.godot/
+*.log
+/bridge/godot-cpp/
+/tools/godot/
+/game/bin/
+/game/*.log
+# A copy of game/ and a second build folder writing its DLL there (work while the game runs from game/)
+/game_work/
+/bridge/build_work/
+
+# The Russian translation's disc copy (lang=ru), game data: never in git
+/games_ru/
+
+# The HD pack (main.gd's default pack= is pack/ under root=): never in git
+/pack/
+
+# The mod folder for another PC (tools\make_dist.py): game binaries, the pack, videos; never in git
+/dist/

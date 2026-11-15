@@ -1,0 +1,138 @@
+From da4879b4c4f85fe27ff4d798e2baff9ed649ca75 Mon Sep 17 00:00:00 2001
+From: AUTHOR <author@example.invalid>
+Date: Sun, 15 Nov 2026 21:08:40 +0300
+Subject: [PATCH] Disc prompt: a host's own "not found" line in its disc's text
+ codes (unused unless set)
+
+FMenuServices::DiscNotFoundText, set through FMenuGameMenus::SetDiscNotFoundText: under a disc
+prompt whose disc is not found, those codes (ended by 0) are typed in the second line's place
+instead of OptionsText::Discs::NotFound, which RenderPlain can only type in the USA font's
+letters. A translation's host gives its own words in its font. Empty (the default): unchanged.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+---
+ Source/WeltallCore/Private/Menu/MenuGameMenus.cpp | 1 +
+ Source/WeltallCore/Private/Menu/MenuLabels.cpp    | 6 ++++--
+ Source/WeltallCore/Private/Menu/MenuMainDisc.cpp  | 3 ++-
+ Source/WeltallCore/Private/Menu/MenuModule.h      | 6 ++++--
+ Source/WeltallCore/Public/Menu/MenuGameMenus.h    | 5 +++++
+ Source/WeltallCore/Public/Menu/MenuProgram.h      | 6 ++++++
+ 6 files changed, 22 insertions(+), 5 deletions(-)
+
+diff --git a/Source/WeltallCore/Private/Menu/MenuGameMenus.cpp b/Source/WeltallCore/Private/Menu/MenuGameMenus.cpp
+index 1ace1f3..e5b3ac8 100644
+--- a/Source/WeltallCore/Private/Menu/MenuGameMenus.cpp
++++ b/Source/WeltallCore/Private/Menu/MenuGameMenus.cpp
+@@ -125,6 +125,7 @@ namespace Weltall
+ 			Result.Settings = Owner.SettingsKept ? &Settings : nullptr;
+ 			Result.Keys = Owner.SettingsKept ? Owner.Keys : nullptr;
+ 			Result.Discs = &Discs;
++			Result.DiscNotFoundText = Owner.DiscNotFoundText;
+ 			Result.Quit = Owner.Quit;
+ 			Result.bLoadsInPlay = true;
+ 			Result.bArrangesParty = true;
+diff --git a/Source/WeltallCore/Private/Menu/MenuLabels.cpp b/Source/WeltallCore/Private/Menu/MenuLabels.cpp
+index 9b16401..cbc0a20 100644
+--- a/Source/WeltallCore/Private/Menu/MenuLabels.cpp
++++ b/Source/WeltallCore/Private/Menu/MenuLabels.cpp
+@@ -172,7 +172,8 @@ namespace Weltall
+ 		Text.push_back(0);
+ 	}
+ 
+-	void FMenuModule::RenderPromptLines(std::span<FMenuLabel> Lines, uint8 FirstText, int32 X, int32 Y, std::string_view SecondLine)
++	void FMenuModule::RenderPromptLines(std::span<FMenuLabel> Lines, uint8 FirstText, int32 X, int32 Y, std::string_view SecondLine,
++		std::span<const uint8> SecondCodes)
+ 	{
+ 		for (std::size_t Line = 0; Line < Lines.size(); ++Line)
+ 		{
+@@ -189,7 +190,8 @@ namespace Weltall
+ 				PromptImage.Rect.Y = static_cast<int16>(V);
+ 			}
+ 			FMenuLabel& Label = Lines[Line];
+-			Label.Width = static_cast<uint8>(Line == 1 && !SecondLine.empty()
++			Label.Width = static_cast<uint8>(Line == 1 && !SecondCodes.empty() ? RenderString(PromptTyping, PromptImage, SecondCodes, Index % 2)
++					: Line == 1 && !SecondLine.empty()
+ 					? RenderPlain(PromptTyping, PromptImage, SecondLine, Index % 2)
+ 					: RenderString(PromptTyping, PromptImage, Resources.Text().String(static_cast<uint8>(FirstText + Line)), Index % 2));
+ 			SetLabelTexture(Label, Index, 0);
+diff --git a/Source/WeltallCore/Private/Menu/MenuMainDisc.cpp b/Source/WeltallCore/Private/Menu/MenuMainDisc.cpp
+index f489389..4db0039 100644
+--- a/Source/WeltallCore/Private/Menu/MenuMainDisc.cpp
++++ b/Source/WeltallCore/Private/Menu/MenuMainDisc.cpp
+@@ -218,7 +218,8 @@ namespace Weltall
+ 	{
+ 		constexpr uint8 BuzzerEffect = 4;
+ 		PlaySound(BuzzerEffect);
+-		RenderPromptLines(MessageLines, FirstText, LinesX, LinesY, OptionsText::Discs::NotFound);
++		// A host's own line in its disc's text codes (a translation's font), else the port's.
++		RenderPromptLines(MessageLines, FirstText, LinesX, LinesY, OptionsText::Discs::NotFound, Services.DiscNotFoundText);
+ 	}
+ 
+ 	TMenuTask<bool> FMenuMain::AddDiscThroughPicker(int32 Disc, uint8 FirstText)
+diff --git a/Source/WeltallCore/Private/Menu/MenuModule.h b/Source/WeltallCore/Private/Menu/MenuModule.h
+index 68c7f39..4296499 100644
+--- a/Source/WeltallCore/Private/Menu/MenuModule.h
++++ b/Source/WeltallCore/Private/Menu/MenuModule.h
+@@ -263,9 +263,11 @@ namespace Weltall
+ 		void GlyphText(std::span<const uint16> Glyphs, std::vector<uint8>& Text) const;
+ 		/**
+ 		 * A prompt's lines (texts FirstText on), typed two to a strip from (320, 78) and placed on the layer
+-		 * one under another from (X, Y); with SecondLine, plain text in the second line's place.
++		 * one under another from (X, Y); with SecondLine, plain text in the second line's place; with SecondCodes (the
++		 * game's text codes, ended by 0), those in its place.
+ 		 */
+-		void RenderPromptLines(std::span<FMenuLabel> Lines, uint8 FirstText, int32 X, int32 Y, std::string_view SecondLine = {});
++		void RenderPromptLines(std::span<FMenuLabel> Lines, uint8 FirstText, int32 X, int32 Y, std::string_view SecondLine = {},
++			std::span<const uint8> SecondCodes = {});
+ 
+ 		// The arcs of orbs, their labels and the selection's pointer (MenuArcs.cpp), laid out by the module's tables.
+ 		TMenuTask<> RevealCommands(std::span<const FMenuArcCommand> Commands);
+diff --git a/Source/WeltallCore/Public/Menu/MenuGameMenus.h b/Source/WeltallCore/Public/Menu/MenuGameMenus.h
+index fdfe80f..da33fe4 100644
+--- a/Source/WeltallCore/Public/Menu/MenuGameMenus.h
++++ b/Source/WeltallCore/Public/Menu/MenuGameMenus.h
+@@ -5,6 +5,7 @@
+ #include "Presentation/DisplayOptions.h"
+ 
+ #include <functional>
++#include <vector>
+ 
+ namespace Weltall
+ {
+@@ -58,6 +59,9 @@ namespace Weltall
+ 		/** Closes the game, which the title's Exit orb asks for; none: the title has the original's three orbs. */
+ 		void SetQuit(std::function<void()> InQuit) { Quit = std::move(InQuit); }
+ 
++		/** The line under a disc prompt when the disc is not found, in the disc's own text codes (FMenuServices::DiscNotFoundText); empty: the port's. */
++		void SetDiscNotFoundText(std::vector<uint8> InText) { DiscNotFoundText = std::move(InText); }
++
+ 	private:
+ 		friend class FMenuGameProgram;
+ 		friend class FMenuGameSettings;
+@@ -73,5 +77,6 @@ namespace Weltall
+ 		std::function<EExampleScenesCopy(bool)> ExampleScenes;
+ 		std::function<FDisplayModes()> DisplayModes;
+ 		std::function<void()> Quit;
++		std::vector<uint8> DiscNotFoundText;
+ 	};
+ }
+diff --git a/Source/WeltallCore/Public/Menu/MenuProgram.h b/Source/WeltallCore/Public/Menu/MenuProgram.h
+index 337a149..7f06d48 100644
+--- a/Source/WeltallCore/Public/Menu/MenuProgram.h
++++ b/Source/WeltallCore/Public/Menu/MenuProgram.h
+@@ -228,6 +228,12 @@ namespace Weltall
+ 		IMenuKeys* Keys = nullptr;
+ 		/** The game's discs: the disc prompts ask until the disc is there; none: they take any confirmation. */
+ 		IMenuDiscs* Discs = nullptr;
++		/**
++		 * The line under a disc prompt that says the disc is not where the game looks, in the game's own text codes (ended
++		 * by 0), for a host whose disc's font is another than the port's line can be typed in (a translation's); empty:
++		 * the port's own line (OptionsText::Discs::NotFound).
++		 */
++		std::vector<uint8> DiscNotFoundText;
+ 		/** Closes the game: the title's arc has an Exit orb at its foot, under the other three; none: the original's arc. */
+ 		std::function<void()> Quit;
+ 		/**
+-- 
+2.48.1.windows.1
+

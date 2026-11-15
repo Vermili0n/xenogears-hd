@@ -1,0 +1,54 @@
+From 5bae70cb825a885f441a405c700b190bf9b86309 Mon Sep 17 00:00:00 2001
+From: AUTHOR <author@example.invalid>
+Date: Sun, 15 Nov 2026 13:23:57 +0300
+Subject: [PATCH 2/4] Field windows as the Russian translation's program lays
+ them out (off by default)
+
+FEventOptions::bRussianWindows, set by a host only when it plays the Russian
+translation's disc 1: a window with a portrait, or of the fixed width, takes
+its message's own lines where they are more than four (the USA's takes four
+and scrolls a longer page's first lines away), and types two glyphs a tick
+from its start. Off: the USA program, unchanged.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+---
+ Source/WeltallCore/Private/Field/FieldMessageOpen.cpp | 3 ++-
+ Source/WeltallCore/Public/Field/EventContext.h        | 8 ++++++++
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/Source/WeltallCore/Private/Field/FieldMessageOpen.cpp b/Source/WeltallCore/Private/Field/FieldMessageOpen.cpp
+index 6859e7d..4cf2901 100644
+--- a/Source/WeltallCore/Private/Field/FieldMessageOpen.cpp
++++ b/Source/WeltallCore/Private/Field/FieldMessageOpen.cpp
+@@ -239,7 +239,8 @@ namespace Weltall::EventOps
+ 			{
+ 				Window.Flags |= FieldMessageWindowFlags::PortraitOnRight;
+ 			}
+-			Window.Text->SetSpeed(Messages.OpenTicks == FFieldMessages::FullRateOpenTicks ? 1 : 2);
++			// The Russian translation's program types two glyphs a tick whatever the opening's length (its 8007FD24h).
++			Window.Text->SetSpeed(Messages.OpenTicks == FFieldMessages::FullRateOpenTicks && !Context.Options.bRussianWindows ? 1 : 2);
+ 			Window.Text->HideBox();
+ 			Window.Message = Messages.Table.String(Place.Message);
+ 			Window.bOpen = true;
+diff --git a/Source/WeltallCore/Public/Field/EventContext.h b/Source/WeltallCore/Public/Field/EventContext.h
+index 0c53d71..9628234 100644
+--- a/Source/WeltallCore/Public/Field/EventContext.h
++++ b/Source/WeltallCore/Public/Field/EventContext.h
+@@ -414,6 +414,14 @@ namespace Weltall
+ 		 * texels to its right.
+ 		 */
+ 		bool bSpriteFramesAligned = true;
++		/**
++		 * Not a fix but another program: the Russian translation's field program (disc 1's file 1/14), which a host sets
++		 * when it plays that translation's disc. A window with a portrait, or of the fixed width, takes its message's own
++		 * lines where they are more than four (the USA's program takes four, and a longer page scrolls its first lines
++		 * away), and a window types two glyphs a tick from its start (the USA's one, at the full opening's length). Off
++		 * here and in Original(): the USA's program.
++		 */
++		bool bRussianWindows = false;
+ 
+ 		/** Every fix off: the original's behavior throughout. */
+ 		static constexpr FEventOptions Original()
+-- 
+2.48.1.windows.1
+

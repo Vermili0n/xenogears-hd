@@ -1,0 +1,62 @@
+From c3f28f2585fc9b04652e1eabc7e744e24ca38825 Mon Sep 17 00:00:00 2001
+From: AUTHOR <author@example.invalid>
+Date: Sun, 15 Nov 2026 13:23:58 +0300
+Subject: [PATCH 3/4] Story sweep: a watch told of every session and frame the
+ run plays (off by default)
+
+For a tool that looks on at the play (the port's story walk draws every frame through its
+bridge and keeps save states along the way). Empty by default: nothing changes for the
+sweep's own runs.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+---
+ Tests/Support/StorySweepRun.cpp | 8 ++++++++
+ Tests/Support/StorySweepRun.h   | 6 ++++++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/Tests/Support/StorySweepRun.cpp b/Tests/Support/StorySweepRun.cpp
+index 2c2c885..419ca0c 100644
+--- a/Tests/Support/StorySweepRun.cpp
++++ b/Tests/Support/StorySweepRun.cpp
+@@ -216,6 +216,10 @@ namespace Weltall::Testing
+ 		Menus = std::make_unique<FMenuGameMenus>(*Game.Discs[0].Executable);
+ 		Session->SetMenus(Menus.get());
+ 		Session->SetStory(Story);
++		if (Options.Watch)
++		{
++			Options.Watch(*Session, nullptr);
++		}
+ 		return std::nullopt;
+ 	}
+ 
+@@ -346,6 +350,10 @@ namespace Weltall::Testing
+ 		}
+ 		std::optional<FError> Error = Loop->Frame(PerVblank);
+ 		WatchStaging();
++		if (Options.Watch)
++		{
++			Options.Watch(*Session, Loop.get());
++		}
+ 		return Error;
+ 	}
+ 
+diff --git a/Tests/Support/StorySweepRun.h b/Tests/Support/StorySweepRun.h
+index 8f2a982..5e321f1 100644
+--- a/Tests/Support/StorySweepRun.h
++++ b/Tests/Support/StorySweepRun.h
+@@ -124,6 +124,12 @@ namespace Weltall::Testing
+ 		bool bFeiAsId = false;
+ 		/** The saved variables changed in every state before its map is entered: a flag as the story has it where the save does not. */
+ 		std::vector<FStorySweepVariable> Variables;
++		/**
++		 * Told of every session the run powers on, before its first map is entered (Loop null), and of every frame the run
++		 * plays, after it: for a tool that looks on at the play (draws it, keeps states of it). It must not change what
++		 * the game does (the drawing's own settings it may). None (the default): nothing is told.
++		 */
++		std::function<void(FGameSession& Session, FGameLoop* Loop)> Watch;
+ 	};
+ 
+ 	/** How a stretch of play ended. */
+-- 
+2.48.1.windows.1
+

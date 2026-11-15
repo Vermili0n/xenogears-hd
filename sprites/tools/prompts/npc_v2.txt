@@ -1,0 +1,10 @@
+Image 1 is a {grid} grid of {n} animation frames of a retro pixel-art game sprite of one original background character, upscaled. Image 2 only shows the rendering style wanted (it is a DIFFERENT character - copy its line weight, cel shading and level of detail, not its face, hair or clothes).
+Task: redraw image 1 as clean high-resolution 90s anime illustrations in the rendering style of image 2. This is a precise trace-over: the result will be laid exactly over image 1, so matching its geometry matters more than anything else. All {n} frames show the same character: keep the design identical from frame to frame.
+Rules:
+1. Same canvas as image 1: the same {grid} grid and size. Each figure stays in its cell at exactly the same position and size: same top of the head, same feet line, same left and right extents.
+2. Exactly the same pose in every frame: legs, feet, arms, hands and head direction as in image 1. Do not change the stance. Keep the compact sprite proportions.
+3. Same colors as image 1 for hair, skin, clothes and every accessory.
+4. Keep exactly what the sprite shows: hoods, helmets, masks, goggles, hats, headscarves, beards, bags and held objects stay where they are and as they are. If the face is covered by a hood, mask or helmet, keep it covered - never reveal a face that the sprite hides. Do not add accessories, beards or details the sprite does not have.
+5. Clean face with clearly visible eyes wherever the face is visible. Where image 1 shows the back of the head, draw the back of the head - never add a face there.
+6. Exactly {n} figures, one per cell, in the same order as image 1.
+7. The background of every cell is the same flat solid magenta #FF00FF: no gradients, no colored or textured backgrounds, no shadows, no floor, no text, no borders, no grid lines between the cells, no extra objects.

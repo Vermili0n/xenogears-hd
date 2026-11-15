@@ -1,0 +1,2 @@
+Put the disc 1 image of Xenogears here (BIN + CUE or CHD): the American release (USA) or the Russian translation.
+Disc 2 of the same release goes here too (it can be added later: it is needed only at the end of the first disc). See README.txt for details.

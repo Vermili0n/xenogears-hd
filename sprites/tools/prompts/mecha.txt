@@ -1,0 +1,9 @@
+Image 1 is a {grid} grid of {n} animation frames of a retro low-resolution game sprite of a giant robot (mecha), upscaled from tiny pixel art.
+Task: redraw every frame as a high-resolution, highly detailed 90s anime mecha illustration: crisp clean lineart, sharp armor panel lines, hard cel shading with metallic highlights, mechanical details (joints, vents, rivets, panel seams). The result must look hand-drawn and sharp, NOT like a smoothed or upscaled copy of the pixel art.
+This is a precise trace-over: the result will be laid exactly over image 1, so matching its geometry matters most.
+Rules:
+1. Same canvas and the same {grid} grid; every robot stays in its cell at exactly the same position and size.
+2. Exactly the same pose in every frame: same limbs, same direction, same silhouette.
+3. Keep the robot's design and color scheme from image 1 (red armor, grey joints).
+4. Exactly {n} figures, one per cell, in the same order.
+5. Flat solid magenta #FF00FF background in every cell, no grid lines, no shadows, no text, no extra objects.

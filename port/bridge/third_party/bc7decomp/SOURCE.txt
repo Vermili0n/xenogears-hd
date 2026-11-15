@@ -1,0 +1,3 @@
+bc7decomp.cpp / bc7decomp.h: Richard Geldreich, Jr., from bc7enc_rdo (https://github.com/richgel999/bc7enc_rdo).
+License: MIT or public domain (Unlicense), at the end of bc7decomp.cpp.
+Copied 12.11.2026 from the author's local copy of bc7enc_rdo (the source of the BC7 decoder DLL the sprite tools use), unchanged.

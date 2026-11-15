@@ -1,0 +1,8 @@
+Image 1 is a {grid} grid of {n} animation frames of a retro pixel-art game sprite, upscaled. Image 2 only shows the drawing style wanted (it is a different character - copy its rendering, not its design).
+Task: redraw image 1 as clean high-resolution 90s anime illustrations in the style of image 2: clean lineart, cel shading, crisp details. Keep the design, colors, clothing and proportions of the sprite in image 1 exactly. This is a precise trace-over: the result will be laid exactly over image 1, so matching its geometry matters most.
+Rules:
+1. Same canvas and the same {grid} grid; every figure stays in its cell at exactly the same position and size.
+2. Exactly the same pose in every frame; do not change the stance or the direction.
+3. Same colors as image 1.
+4. Exactly {n} figures, one per cell, in the same order.
+5. Flat solid magenta #FF00FF background in every cell, no grid lines, no shadows, no text, no extra objects.

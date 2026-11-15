@@ -1,0 +1,60 @@
+# Game data: never in git (disc images, memory cards, saves, states)
+*.bin
+*.cue
+*.chd
+*.iso
+*.img
+*.ecm
+*.pbp
+*.m3u
+*.srm
+*.mcr
+*.mcd
+*.sav
+*.state
+
+# The HD pack, its index and videos (published separately)
+*.bc7
+pack/
+*.ogv
+*.mp4
+sprite_alias_index.bin
+
+# Sources cloned for the build (see docs/BUILD.md)
+port/weltall/
+port/bridge/godot-cpp/
+port/games_ru/
+
+# Build output
+build/
+port/bridge/build*/
+port/game/bin/
+port/game_work/
+port/dist/
+port/tools/godot/
+
+# Godot cache and run output
+.godot/
+port/out/
+port/logs/
+*.log
+*.jsonl
+
+# Python
+__pycache__/
+*.pyc
+
+# Model weights and archives
+*.safetensors
+*.ckpt
+*.pt
+*.npy
+*.zip
+*.7z
+*.tar
+
+# Pictures stay out of the code tree (screenshots go to the release page)
+*.png
+*.jpg
+*.jpeg
+*.webp
