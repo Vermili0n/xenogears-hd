@@ -2,7 +2,7 @@
 
 A fan mod: Xenogears (PlayStation, 1998) in high resolution, with redrawn characters.
 
-There are no game images here and there never will be — you need an image of your own disc. Xenogears belongs to Square Enix. This is a non-commercial fan work with no connection to the rights holder.
+There are no game images here and there never will be — you need an image of your own disc. Xenogears belongs to Square Enix. This is a free fan work with no connection to the rights holder.
 
 Русская версия: [README.ru.md](README.ru.md)
 
@@ -93,6 +93,12 @@ And if what I have done dismays you, I ask your forgiveness.
 Enjoy!
 
 Verm
+
+## Buy me a coffee
+
+The mod is free and will stay free. If you would like to thank the author, a coffee is welcome:
+
+USDT or TRX (Tron, TRC20): TKunB8DypdsH9s5CGaCTtTwGidbffz4iNH
 
 ## Rights
 
