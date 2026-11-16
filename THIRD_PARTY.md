@@ -160,3 +160,5 @@ checked.
 
 Xenogears is a trademark of Square Enix; the game's data is not included anywhere. The Russian fan translation
 that the port supports is not included either; the port reads it from the player's own disc image.
+`port/data/sprite_alias_table.csv` holds CRC-32 hashes of what the game draws and names of the HD pack's files, no
+texels of the game; the content index it stands in for (`sprite_alias_index.bin`, the game's texels) is not published.

@@ -7,7 +7,8 @@ What goes in (nothing of it into git: dist/ is ignored):
               from mod\\ (the batch kept ASCII and CRLF, the texts UTF-8 with a BOM, CRLF)
   engine\\    Godot 4.7.2 (tools\\godot, its _sc_ marker: the editor's import keeps its data beside it) and xeno_check.exe
   game\\      the Godot project without its .godot cache (the batch imports it on the first run) and bin\\xeno_bridge.dll
-  data\\      out\\alias\\sprite_alias_index.bin (the pack's pictures found by content)
+  data\\      data\\sprite_alias_table.csv (the pack's pictures found by content, hashes only) and, where it was built,
+              out\\alias\\sprite_alias_index.bin (the same by the original texels: game data, never published)
   movies\\    out\\movies (HD replacements of the game's movies, tools\\make_dist.py makes 13.ogv when it is missing)
   pack\\      the HD pack, robocopy /MIR from XENO_PACK (default: pack\\ beside game\\; read only), log in out\\dist_logs\\pack_robocopy.log
 Environment: XENO_PACK=<the HD pack folder>, XENO_OPENING_VIDEO=<the HD opening .mp4> (unset and no out\\movies\\usa.disc1\\13.ogv:
@@ -94,7 +95,14 @@ def main() -> None:
     shutil.copytree(ROOT / "game" / "shaders", game / "shaders")
     copy(ROOT / "game" / "bin" / "xeno_bridge.dll", game / "bin" / "xeno_bridge.dll")
 
-    copy(ROOT / "out" / "alias" / "sprite_alias_index.bin", out / "data" / "sprite_alias_index.bin")
+    # The table of pictures found by content (hashes only, in git) always; the index (the game's texels, built locally by
+    # tools\sprite_alias_index.py) only where it was built: without it the table alone answers.
+    copy(ROOT / "data" / "sprite_alias_table.csv", out / "data" / "sprite_alias_table.csv")
+    index = ROOT / "out" / "alias" / "sprite_alias_index.bin"
+    if index.exists():
+        copy(index, out / "data" / "sprite_alias_index.bin")
+    elif (out / "data" / "sprite_alias_index.bin").exists():
+        (out / "data" / "sprite_alias_index.bin").unlink()
 
     opening = ROOT / "out" / "movies" / "usa.disc1" / "13.ogv"
     if not opening.exists() and OPENING is None:

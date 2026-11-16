@@ -1,0 +1,158 @@
+# Xenogears HD: pictures of the HD pack found by content, as hashes only (none of the game's texels).
+# The bridge asks this table where the pack has no picture under the name the game draws by (a part the game alters a
+# little before upload, a pilot sprite Weltall draws small in a gear), before the content index (which is not published).
+# A line: kind,width,height,hash,palette,picture,added
+#   kind      upload: <hash>-<palette> is the name the pack lacks (F6's frame.txt lists it, with the upload's size);
+#             region-rect, region-piece, port-rect, port-piece: hash is the CRC-32 of the region's texels through its
+#             palette (port/bridge/src/xeno_session.h, SetAliasTable)
+#   width, height   the size in texels;  palette   the CRC-32 of the palette, as in the pack's file names
+#   picture   the pack's file (no .bc7/.png) drawn there
+#   added     texels the game draws that the picture's original lacks, "u:v" separated by spaces (drawn from VRAM under it)
+# A new line: play with alias_record=<file> on the game's command line. Every lookup the table did not answer is
+# written there with picture "?". Put the name of a pack file in place of "?" and add the line here.
+upload,8,7,2d80845e,5f3fabb0,ff29f04-5f3fabb0,2:5 3:5
+upload,8,16,a13a27cc,5f3fabb0,48c4cbb6-5f3fabb0,2:5 3:5
+upload,8,19,bff89eb2,5f3fabb0,c4ba4ddd-5f3fabb0,2:5 3:5
+upload,8,20,4eddd84f,5f3fabb0,fa25aae4-5f3fabb0,0:7 1:7
+upload,16,9,4baab293,5f3fabb0,ba023c07-5f3fabb0,4:3 5:3
+upload,16,10,e6161c2,5f3fabb0,5490a9af-5f3fabb0,10:0 11:0
+upload,16,25,88084cc1,5f3fabb0,ada71b55-5f3fabb0,10:4 11:4 10:5 11:5
+upload,24,18,3c90aa87,5f3fabb0,c954fb55-5f3fabb0,10:2 11:2 12:2 13:2 6:5 7:5 8:5 9:5 10:7 11:7 12:7 13:7 14:13 15:13 16:13 17:13 14:14 15:14
+upload,28,15,57f72c70,5f3fabb0,c71c4378-5f3fabb0,18:1 19:1 16:2 17:2 12:3 13:3 6:8 7:8 10:11 11:11 6:12 7:12
+upload,28,20,6398581d,5f3fabb0,1d2ace4f-5f3fabb0,14:7 15:7 22:12 23:12 22:13 23:13
+upload,160,13,f0413909,666dd186,65918005-666dd186,
+upload,4,4,6fb68095,97c2ba00,f8a9ca74-97c2ba00,0:1 1:1
+upload,4,8,1d36b6f,97c2ba00,3f742fe9-97c2ba00,0:1 1:1
+upload,4,8,cdff737f,97c2ba00,f35837f9-97c2ba00,0:1 1:1
+upload,8,3,c9b14820,97c2ba00,1e2b8584-97c2ba00,2:1 3:1
+upload,12,4,cba242f1,97c2ba00,f5050677-97c2ba00,8:1 9:1
+upload,12,5,9a20d4e,97c2ba00,b95d2b7c-97c2ba00,4:3 5:3
+upload,12,6,defbc4bd,97c2ba00,402d22b-97c2ba00,10:0 11:0
+upload,12,8,53ddc2ce,97c2ba00,28c3c57a-97c2ba00,10:0 11:0 6:2 7:2
+upload,12,12,930e50f5,97c2ba00,e983bf0-97c2ba00,6:7 7:7
+upload,12,13,8374017d,97c2ba00,f3836399-97c2ba00,4:8 5:8
+upload,16,5,ef9968f0,97c2ba00,720f03f5-97c2ba00,10:1 11:1
+upload,16,6,479ff819,97c2ba00,da09931c-97c2ba00,10:2 11:2
+upload,16,6,be3c2942,97c2ba00,770f74a5-97c2ba00,6:4 7:4
+upload,16,8,fca87d4b,97c2ba00,632e8635-97c2ba00,12:5 13:5
+upload,16,9,1981ce53,97c2ba00,24b44bd6-97c2ba00,6:3 7:3
+upload,16,10,2e547f8d,97c2ba00,45e1f9e1-97c2ba00,10:9 11:9
+upload,16,10,301ec80d,97c2ba00,747150f8-97c2ba00,8:9 9:9
+upload,16,10,8fcfa7d5,97c2ba00,1e2be16a-97c2ba00,8:5 9:5 8:8 9:8 8:9 9:9
+upload,16,11,845fdb4c,97c2ba00,51d40506-97c2ba00,8:6 9:6 8:9 9:9
+upload,16,12,d7850fb8,97c2ba00,25a01a96-97c2ba00,6:0 7:0
+upload,16,12,f193d0d3,97c2ba00,2bd4ece6-97c2ba00,10:1 11:1 8:9 9:9 8:10 9:10 8:11 9:11
+upload,16,13,18f50d57,97c2ba00,ead01879-97c2ba00,6:1 7:1
+upload,16,13,8558c1a3,97c2ba00,777dd48d-97c2ba00,6:1 7:1
+upload,16,14,121fdba4,97c2ba00,25868c42-97c2ba00,10:2 11:2 8:10 9:10 8:11 9:11 8:12 9:12 8:13 9:13
+upload,16,17,7d334484,97c2ba00,c1bc1031-97c2ba00,6:4 7:4
+upload,16,17,b7bd1b42,97c2ba00,8a0e7a33-97c2ba00,12:6 13:6 10:9 11:9 2:11 3:11
+upload,16,17,bd0d6f1a,97c2ba00,80be0e6b-97c2ba00,12:6 13:6 10:9 11:9 2:11 3:11
+upload,16,17,d0880f40,97c2ba00,5855f1ec-97c2ba00,12:7 13:7 10:10 11:10
+upload,16,18,22af4078,97c2ba00,15740fc-97c2ba00,10:13 11:13
+upload,16,18,bfe0332a,97c2ba00,bb19180c-97c2ba00,12:6 13:6 6:11 7:11
+upload,16,18,f070b070,97c2ba00,2ab28e91-97c2ba00,10:3 11:3 8:11 9:11 8:12 9:12 8:13 9:13
+upload,20,8,27db99a,97c2ba00,569d83ef-97c2ba00,12:0 13:0
+upload,20,9,d661ae69,97c2ba00,791741bd-97c2ba00,6:3 7:3
+upload,20,12,15e7fa53,97c2ba00,2c6ac696-97c2ba00,2:11
+upload,20,12,be877be2,97c2ba00,7740ec0e-97c2ba00,12:5 13:5 16:6 17:6 12:7 13:7
+upload,20,14,d87ca234,97c2ba00,27aff580-97c2ba00,16:8 17:8
+upload,20,15,817f4e32,97c2ba00,af57201-97c2ba00,16:8 17:8
+upload,20,16,2e3a254a,97c2ba00,ceacddaf-97c2ba00,16:3 17:3
+upload,20,16,87ddc90d,97c2ba00,13a0648b-97c2ba00,4:7 5:7 4:8 5:8
+upload,20,16,f6d20d72,97c2ba00,5ae7761d-97c2ba00,14:11 15:11 14:13 15:13
+upload,24,9,79580ae0,97c2ba00,ad17b440-97c2ba00,8:0 9:0 18:0 19:0
+upload,24,10,85dd0529,97c2ba00,1e0ee543-97c2ba00,8:8 9:8
+upload,24,15,d1c4aace,97c2ba00,eeb06fea-97c2ba00,12:0 13:0 12:1 13:1 6:5 7:5
+upload,24,16,9d4376b2,c5ec68f,1ebb1dc3-c5ec68f,14:8
+upload,24,18,d4f6218a,c5ec68f,ac20104-c5ec68f,10:13 11:13 12:13
+upload,24,19,e75f239d,c5ec68f,62a37510-c5ec68f,8:13
+upload,32,23,c6716fa4,c5ec68f,daac9ef9-c5ec68f,20:18 21:18 22:18
+upload,16,13,ee5e66cb,cd3fa59e,aef2f5b7-cd3fa59e,5:1 6:1 7:1 8:1 9:1
+upload,20,13,5be13079,cd3fa59e,9cb66cba-cd3fa59e,16:6 17:6 18:6 19:6
+upload,24,10,e36d2276,cd3fa59e,bcc6a5f3-cd3fa59e,12:4 13:4
+upload,24,13,871543a1,cd3fa59e,4a7a9934-cd3fa59e,14:8 15:8 16:8 17:8
+upload,24,27,3a717a,cd3fa59e,cd55abef-cd3fa59e,14:22 15:22 16:22 17:22
+upload,28,30,5009ab2d,cd3fa59e,aae3095d-cd3fa59e,20:5 21:5 22:5 23:5 22:8 23:8 22:9 23:9
+region-piece,8,12,b396437d,b1cfd656,eab98c1f-b1cfd656,
+region-piece,12,8,8a0ea1e4,b1cfd656,8e47d4da-b1cfd656,
+region-piece,12,12,bd4ef48f,b1cfd656,cd5d5e2a-b1cfd656,
+port-rect,16,12,10694f5e,9694422f,d0da2574-9694422f,
+port-rect,16,12,7b055272,9694422f,382f0d35-9694422f,
+port-rect,16,13,2e991886,9694422f,d3a42176-9694422f,
+port-rect,8,4,d26dfcc0,fe97bb8a,95b69216-fe97bb8a,
+port-rect,8,7,c5d973ff,fe97bb8a,31b2fc54-fe97bb8a,
+port-rect,16,11,b3a452c8,fe97bb8a,405483c4-fe97bb8a,
+port-rect,16,17,9e8e83a2,fe97bb8a,e99b6b70-fe97bb8a,
+port-piece,4,9,654f51ef,24829d0f,3e02a7d9-24829d0f,
+port-piece,8,6,3a80a2b7,24829d0f,bf4a34d9-24829d0f,
+port-piece,8,6,cb53c2b,24829d0f,91da14d-24829d0f,
+port-piece,8,8,6c8f855c,24829d0f,6399436d-24829d0f,
+port-piece,12,7,a02cbbd0,24829d0f,99c3f8fb-24829d0f,
+port-piece,12,11,fadf3bc6,24829d0f,510df62b-24829d0f,
+port-piece,16,9,8b3790ba,24829d0f,efcfbcc2-24829d0f,
+port-piece,20,14,6b81efab,24829d0f,e1b892d6-24829d0f,
+port-piece,4,13,88f60d60,9694422f,70338d1f-9694422f,
+port-piece,8,5,b511facd,9694422f,f5a0a2fd-9694422f,
+port-piece,8,7,b36f6950,9694422f,e4de6ca7-9694422f,
+port-piece,8,9,b74a6381,9694422f,8a654539-9694422f,
+port-piece,8,12,9e11a8b1,9694422f,1fe05062-9694422f,
+port-piece,8,12,fe09f8d4,9694422f,336c894e-9694422f,
+port-piece,8,15,9a9d399d,9694422f,dcb712b7-9694422f,
+port-piece,8,21,56ac7334,9694422f,de3e65a2-9694422f,
+port-piece,8,22,343abbc,9694422f,2bf01030-9694422f,
+port-piece,12,4,1bea6dab,9694422f,2e0a01bb-9694422f,
+port-piece,12,6,aea3129f,9694422f,d4b5fc19-9694422f,
+port-piece,12,8,3a0baaaa,9694422f,676efe3f-9694422f,
+port-piece,12,12,d6891d6c,9694422f,b61fea01-9694422f,
+port-piece,12,13,1a112a0e,9694422f,b31c2e3d-9694422f,
+port-piece,12,14,c6de058,9694422f,7e916a0a-9694422f,
+port-piece,12,15,b340fc43,9694422f,f7e97d22-9694422f,
+port-piece,12,16,7d841652,9694422f,d0c103cd-9694422f,
+port-piece,12,21,6faa5cbe,9694422f,5ca513b9-9694422f,
+port-piece,12,21,f1135238,9694422f,7036d610-9694422f,
+port-piece,16,3,28e64880,9694422f,a7d74f2b-9694422f,
+port-piece,16,3,7f0a808f,9694422f,650f78a2-9694422f,
+port-piece,16,6,5b243a9e,9694422f,b1e89aa-9694422f,
+port-piece,16,12,1dd7f7af,9694422f,2c94e3a4-9694422f,
+port-piece,16,12,84f4d46,9694422f,f49d8132-9694422f,
+port-piece,16,12,9062fb24,9694422f,8b9887c1-9694422f,
+port-piece,16,13,95a94a45,9694422f,2aa5ad24-9694422f,
+port-piece,16,14,8d7b70d1,9694422f,d4e13d2b-9694422f,
+port-piece,16,15,3522cc14,9694422f,5fc534e2-9694422f,
+port-piece,20,18,dfb264c6,9694422f,ea900b32-9694422f,
+port-piece,4,5,161b51fb,fe97bb8a,1a32b329-fe97bb8a,
+port-piece,4,5,910a9e8b,fe97bb8a,3c2b60e7-fe97bb8a,
+port-piece,4,8,873be4e4,fe97bb8a,5eef95c3-fe97bb8a,
+port-piece,4,8,dd2d5d31,fe97bb8a,25639588-fe97bb8a,
+port-piece,4,14,230a3eac,fe97bb8a,ec66b6c7-fe97bb8a,
+port-piece,4,20,93ff0a34,fe97bb8a,8a96442f-fe97bb8a,
+port-piece,8,3,58e373df,fe97bb8a,fa403d25-fe97bb8a,
+port-piece,8,5,a200b9e3,fe97bb8a,3fa67672-fe97bb8a,
+port-piece,8,6,74ac3ab0,fe97bb8a,497f7e09-fe97bb8a,
+port-piece,8,8,18f42a81,fe97bb8a,6b4b1e5c-fe97bb8a,
+port-piece,8,8,2058122e,fe97bb8a,5c65fffd-fe97bb8a,
+port-piece,8,8,9f83556f,fe97bb8a,5df5b29c-fe97bb8a,
+port-piece,8,10,7ba236b2,fe97bb8a,e2c5b4e4-fe97bb8a,
+port-piece,8,13,877a5aed,fe97bb8a,f23dd627-fe97bb8a,
+port-piece,8,16,ab21103a,fe97bb8a,a311a10-fe97bb8a,
+port-piece,8,17,23a0d126,fe97bb8a,584224e1-fe97bb8a,
+port-piece,8,18,f3b0a0de,fe97bb8a,2b18aec0-fe97bb8a,
+port-piece,12,4,571f7fa1,fe97bb8a,b7d2eb18-fe97bb8a,
+port-piece,12,4,ef0af14d,fe97bb8a,4ac5f1fc-fe97bb8a,
+port-piece,12,6,78151d20,fe97bb8a,db41df8d-fe97bb8a,
+port-piece,12,11,7b8d3770,fe97bb8a,31e4a8bd-fe97bb8a,
+port-piece,12,20,eaa911e1,fe97bb8a,2b09a86-fe97bb8a,
+port-piece,12,25,5b4a8ed6,fe97bb8a,c26769e6-fe97bb8a,
+port-piece,16,5,a218f173,fe97bb8a,b8c61a3b-fe97bb8a,
+port-piece,16,7,e3c3bd68,fe97bb8a,8151d44d-fe97bb8a,
+port-piece,16,13,f5e1daf3,fe97bb8a,959b5988-fe97bb8a,
+port-piece,16,14,9d29625d,fe97bb8a,d237faee-fe97bb8a,
+port-piece,16,16,2f10e2ff,fe97bb8a,904602ea-fe97bb8a,
+port-piece,16,18,a6ec3aaa,fe97bb8a,df5b82ad-fe97bb8a,
+port-piece,20,12,97c3de22,fe97bb8a,a032604b-fe97bb8a,
+port-piece,20,13,cc662dff,fe97bb8a,acb70c50-fe97bb8a,
+port-piece,20,17,9ae9b266,fe97bb8a,28a791ac-fe97bb8a,
+port-piece,20,18,539898c2,fe97bb8a,dfe13f83-fe97bb8a,
+port-piece,24,16,9e9fb298,fe97bb8a,15423540-fe97bb8a,
+port-piece,28,13,64d120e3,fe97bb8a,b9fec78b-fe97bb8a,

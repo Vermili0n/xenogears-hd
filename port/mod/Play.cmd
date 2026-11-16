@@ -26,7 +26,7 @@ goto stop
 :run
 "%ENGINE%\xeno_check.exe" say starting
 rem The game's own lines go to logs\godot.log only (Godot would print them into this window too).
-"%ENGINE%\Godot_v4.7.2-stable_win64.exe" --path "%ROOT%\game" --log-file "%ROOT%\logs\godot.log" -- "root=%ROOT%" games=Games lang=auto pack=pack alias_index=data\sprite_alias_index.bin movies=movies saves=saves states=states reports=reports boot=1 %* > nul 2>&1
+"%ENGINE%\Godot_v4.7.2-stable_win64.exe" --path "%ROOT%\game" --log-file "%ROOT%\logs\godot.log" -- "root=%ROOT%" games=Games lang=auto pack=pack alias_table=data\sprite_alias_table.csv alias_index=data\sprite_alias_index.bin movies=movies saves=saves states=states reports=reports boot=1 %* > nul 2>&1
 set "CODE=%ERRORLEVEL%"
 rem 0: the player closed the game; 2: the game could not start and its window said why.
 if "%CODE%"=="0" goto end

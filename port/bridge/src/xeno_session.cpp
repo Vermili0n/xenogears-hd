@@ -88,6 +88,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -1738,6 +1739,26 @@ namespace Xeno
 		bool bAliasOn = false;
 		/** XENO_ALIAS_REPORT=<file>: each upload compared, once, with its best candidate and the measures (appended). */
 		std::FILE* AliasReport = nullptr;
+		/**
+		 * The table of pictures found by content (SetAliasTable): what the index's rule found, as hashes only - an upload's
+		 * Beetle name (AliasByUpload, by its pack key) or a region's texels' CRC (AliasByTexels, by MatchByContent's Own) -
+		 * and the pack's picture. Asked before the index, so a build without the index finds what was recorded.
+		 */
+		struct FAliasRow
+		{
+			uint64 Key = 0;
+			uint32 Palette = 0;
+			int Wide = 0, High = 0;
+			std::vector<uint32> Added;
+		};
+		std::unordered_map<uint64, FAliasRow> AliasByUpload, AliasByTexels;
+		/** SetAliasRecord / XENO_ALIAS_RECORD=<file>: each upload or region compared, once, as a line of the table (appended). */
+		std::FILE* AliasRecord = nullptr;
+
+		void UpdateAliasOn()
+		{
+			bAliasOn = !AliasBySize.empty() || !AliasByUpload.empty() || !AliasByTexels.empty() || AliasRecord != nullptr;
+		}
 
 		/** The upload's texels through the view's CLUT: 0 transparent, else 0x8000 | its 15-bit colour (the index's form). */
 		bool UploadTexels(const FVram& Vram, uint32 View, const FBeetleTexturePart& Part, int& Wide, int& High, std::vector<uint16>& Out) const
@@ -1822,7 +1843,7 @@ namespace Xeno
 				}
 				const uint64 Own = static_cast<uint64>(Crc32OfUnits(Texels, Palette)) << 32 | static_cast<uint64>(RegionWide) << 16 | static_cast<uint64>(RegionHigh);
 				const char* What = Page.Y >= FVram::Height ? (Which == 0 ? "port-rect" : "port-piece") : (Which == 0 ? "region-rect" : "region-piece");
-				const uint64 Key = MatchByContent(Own, Palette, Texels, RegionWide, RegionHigh, What);
+				const uint64 Key = MatchByContent(Own, Palette, Texels, RegionWide, RegionHigh, What, What);
 				if (const uint8* Kind = Key != 0 ? InPack(Key) : nullptr)
 				{
 					Hit.Kind = FHdHit::Rect;
@@ -1838,8 +1859,12 @@ namespace Xeno
 			return Hit;
 		}
 
-		/** The index's picture of these texels (AliasName's rule), remembered by Own; 0 none. */
-		uint64 MatchByContent(uint64 Own, uint32 Palette, const std::vector<uint16>& Texels, int Wide, int High, const char* What) const
+		/**
+		 * The picture of these texels, remembered by Own; 0 none: the table's (SetAliasTable) where it has a line for them, else
+		 * the index's (AliasName's rule). Kind: "upload" (Own is the upload's pack key) or the region's kind (Own its texels' CRC
+		 * and size), as the table's lines name them.
+		 */
+		uint64 MatchByContent(uint64 Own, uint32 Palette, const std::vector<uint16>& Texels, int Wide, int High, const char* What, const char* Kind) const
 		{
 			const auto Known = AliasFound.find(Own);
 			if (Known != AliasFound.end())
@@ -1848,8 +1873,18 @@ namespace Xeno
 			}
 			FAliasFound Found;
 			Found.Texels = Wide * High;
+			const bool bUpload = std::strcmp(Kind, "upload") == 0;
+			const auto& Rows = bUpload ? AliasByUpload : AliasByTexels;
+			const auto Row = Rows.find(Own);
 			const auto Bucket = AliasBySize.find(static_cast<uint32>(Wide) << 16 | static_cast<uint32>(High));
-			if (Bucket != AliasBySize.end())
+			if (Row != Rows.end() && Row->second.Wide == Wide && Row->second.High == High && Row->second.Palette == Palette && InPack(Row->second.Key) != nullptr)
+			{
+				Found.Key = Found.Best = Row->second.Key;
+				Found.Conflicts = 0;
+				Found.Edges = static_cast<int>(Row->second.Added.size());
+				Found.Added = Row->second.Added;
+			}
+			else if (Bucket != AliasBySize.end())
 			{
 				// The best candidate: fewest opaque texels of another colour, then fewest texels opaque in one only.
 				for (const FAliasEntry& Entry : Bucket->second)
@@ -1917,6 +1952,20 @@ namespace Xeno
 					Found.Conflicts, Found.Edges, Found.Key != 0 ? 1 : 0, Palette, Wide * High <= 4096 ? Hex.c_str() : "");
 				std::fflush(AliasReport);
 			}
+			if (AliasRecord != nullptr)
+			{
+				// A line of the table (SetAliasTable's form); "?" where nothing was found, for a person to fill in.
+				std::string Added;
+				for (const uint32 At : Found.Added)
+				{
+					char Texel[16];
+					std::snprintf(Texel, sizeof(Texel), "%s%u:%u", Added.empty() ? "" : " ", At & 0xFFFF, At >> 16);
+					Added += Texel;
+				}
+				std::fprintf(AliasRecord, "%s,%d,%d,%x,%x,%s,%s\n", bUpload ? "upload" : Kind, Wide, High, static_cast<uint32>(Own >> 32), Palette,
+					Found.Key != 0 ? BeetleTextureFileName({static_cast<uint32>(Found.Key >> 32), static_cast<uint32>(Found.Key)}).c_str() : "?", Added.c_str());
+				std::fflush(AliasRecord);
+			}
 			return AliasFound.emplace(Own, Found).first->second.Key;
 		}
 
@@ -1938,7 +1987,7 @@ namespace Xeno
 			{
 				return AliasFound.emplace(Own, FAliasFound{}).first->second.Key;
 			}
-			return MatchByContent(Own, Part.Palette, Texels, Wide, High, BeetleTextureFileName({Part.Upload, Part.Palette}).c_str());
+			return MatchByContent(Own, Part.Palette, Texels, Wide, High, BeetleTextureFileName({Part.Upload, Part.Palette}).c_str(), "upload");
 		}
 
 		/** Resolve, remembered by region (scenery for the map's life, the rest for the frame). */
@@ -5191,7 +5240,7 @@ namespace Xeno
 		FImpl& I = *Impl;
 		I.AliasBySize.clear();
 		I.AliasFound.clear();
-		I.bAliasOn = false;
+		I.UpdateAliasOn();
 		if (Path.empty())
 		{
 			return {};
@@ -5220,15 +5269,165 @@ namespace Xeno
 			File.read(reinterpret_cast<char*>(Alias.Texels.data()), static_cast<std::streamsize>(Alias.Texels.size() * 2));
 			if (!File)
 			{
+				I.AliasBySize.clear();
+				I.UpdateAliasOn();
 				return "alias index cut short: " + Path;
 			}
 			I.AliasBySize[static_cast<uint32>(Wide) << 16 | High].push_back(std::move(Alias));
 		}
-		I.bAliasOn = true;
+		I.UpdateAliasOn();
 		if (const char* Report = std::getenv("XENO_ALIAS_REPORT"); Report != nullptr && I.AliasReport == nullptr)
 		{
 			I.AliasReport = std::fopen(Report, "ab");
 		}
+		return {};
+	}
+
+	std::string FSession::SetAliasTable(const std::string& Path)
+	{
+		FImpl& I = *Impl;
+		I.AliasByUpload.clear();
+		I.AliasByTexels.clear();
+		I.AliasFound.clear();
+		I.UpdateAliasOn();
+		if (Path.empty())
+		{
+			return {};
+		}
+		std::ifstream File(std::filesystem::u8path(Path), std::ios::binary);
+		if (!File)
+		{
+			return "alias table unreadable: " + Path;
+		}
+		// "kind,width,height,hash,palette,picture[,added]" a line; '#' begins a comment; a picture "?" is a line to fill in.
+		std::string Line, FirstBad;
+		int Number = 0, Bad = 0;
+		while (std::getline(File, Line))
+		{
+			++Number;
+			if (const std::size_t Hash = Line.find('#'); Hash != std::string::npos)
+			{
+				Line.erase(Hash);
+			}
+			while (!Line.empty() && (Line.back() == '\r' || Line.back() == ' ' || Line.back() == '\t'))
+			{
+				Line.pop_back();
+			}
+			if (Line.find_first_not_of(" \t") == std::string::npos)
+			{
+				continue;
+			}
+			std::vector<std::string> Fields;
+			for (std::size_t From = 0;;)
+			{
+				const std::size_t Comma = Line.find(',', From);
+				std::string Field = Line.substr(From, Comma == std::string::npos ? std::string::npos : Comma - From);
+				const std::size_t First = Field.find_first_not_of(" \t"), Last = Field.find_last_not_of(" \t");
+				Fields.push_back(First == std::string::npos ? std::string() : Field.substr(First, Last - First + 1));
+				if (Comma == std::string::npos)
+				{
+					break;
+				}
+				From = Comma + 1;
+			}
+			const auto Hex = [](const std::string& Text, uint32& Value) {
+				char* End = nullptr;
+				Value = static_cast<uint32>(std::strtoul(Text.c_str(), &End, 16));
+				return !Text.empty() && Text.size() <= 8 && End != nullptr && *End == '\0';
+			};
+			uint32 Hashed = 0, Palette = 0;
+			const int Wide = Fields.size() >= 6 ? std::atoi(Fields[1].c_str()) : 0, High = Fields.size() >= 6 ? std::atoi(Fields[2].c_str()) : 0;
+			const std::optional<FBeetleTextureName> Picture = Fields.size() >= 6 ? BeetleTextureNameOf(Fields[5]) : std::nullopt;
+			const bool bUpload = !Fields.empty() && Fields[0] == "upload";
+			const bool bKind = bUpload || (!Fields.empty() && (Fields[0] == "region-rect" || Fields[0] == "region-piece" || Fields[0] == "port-rect" || Fields[0] == "port-piece"));
+			if (Fields.size() >= 6 && Fields[5] == "?")
+			{
+				continue;
+			}
+			if (Fields.size() < 6 || Fields.size() > 7 || !bKind || Wide < 1 || Wide > 256 || High < 1 || High > 256 || !Hex(Fields[3], Hashed) || !Hex(Fields[4], Palette)
+				|| !Picture)
+			{
+				++Bad;
+				FirstBad = FirstBad.empty() ? std::to_string(Number) : FirstBad;
+				continue;
+			}
+			FImpl::FAliasRow Row;
+			Row.Key = PackKey(Picture->Upload, Picture->Palette);
+			Row.Palette = Palette;
+			Row.Wide = Wide;
+			Row.High = High;
+			bool bAddedRead = true;
+			if (Fields.size() == 7)
+			{
+				// The texels the game draws that the picture's original lacked: "u:v" separated by spaces.
+				for (std::size_t From = 0; From < Fields[6].size();)
+				{
+					const std::size_t Space = std::min(Fields[6].find(' ', From), Fields[6].size());
+					const std::string Texel = Fields[6].substr(From, Space - From);
+					From = Space + 1;
+					if (Texel.empty())
+					{
+						continue;
+					}
+					const std::size_t Colon = Texel.find(':');
+					const int U = Colon != std::string::npos ? std::atoi(Texel.substr(0, Colon).c_str()) : -1;
+					const int V = Colon != std::string::npos ? std::atoi(Texel.substr(Colon + 1).c_str()) : -1;
+					if (U < 0 || U >= Wide || V < 0 || V >= High)
+					{
+						bAddedRead = false;
+						break;
+					}
+					Row.Added.push_back(static_cast<uint32>(U) | static_cast<uint32>(V) << 16);
+				}
+			}
+			if (!bAddedRead)
+			{
+				++Bad;
+				FirstBad = FirstBad.empty() ? std::to_string(Number) : FirstBad;
+				continue;
+			}
+			// An upload by its Beetle name (its units' CRC and the palette's); a region by its texels' CRC and size (RegionAlias's Own).
+			const uint64 Key = bUpload ? PackKey(Hashed, Palette) : static_cast<uint64>(Hashed) << 32 | static_cast<uint64>(Wide) << 16 | static_cast<uint64>(High);
+			(bUpload ? I.AliasByUpload : I.AliasByTexels)[Key] = std::move(Row);
+		}
+		I.UpdateAliasOn();
+		return Bad == 0 ? std::string() : "alias table " + Path + ": " + std::to_string(Bad) + " lines not understood (the first: line " + FirstBad + ")";
+	}
+
+	int FSession::AliasTableRows() const
+	{
+		return static_cast<int>(Impl->AliasByUpload.size() + Impl->AliasByTexels.size());
+	}
+
+	std::string FSession::SetAliasRecord(const std::string& Path)
+	{
+		FImpl& I = *Impl;
+		if (I.AliasRecord != nullptr)
+		{
+			std::fclose(I.AliasRecord);
+			I.AliasRecord = nullptr;
+		}
+		I.AliasFound.clear();
+		if (!Path.empty())
+		{
+			std::error_code SizeError;
+			const bool bNew = !std::filesystem::exists(std::filesystem::u8path(Path)) || std::filesystem::file_size(std::filesystem::u8path(Path), SizeError) == 0;
+#ifdef _WIN32
+			I.AliasRecord = _wfopen(std::filesystem::u8path(Path).c_str(), L"ab");
+#else
+			I.AliasRecord = std::fopen(Path.c_str(), "ab");
+#endif
+			if (I.AliasRecord == nullptr)
+			{
+				I.UpdateAliasOn();
+				return "alias record unwritable: " + Path;
+			}
+			if (bNew)
+			{
+				std::fprintf(I.AliasRecord, "# kind,width,height,hash,palette,picture,added - recorded by the bridge (FSession::SetAliasRecord); picture '?': none found\n");
+			}
+		}
+		I.UpdateAliasOn();
 		return {};
 	}
 
@@ -5270,10 +5469,25 @@ namespace Xeno
 		I.AliasFound.clear();
 		I.ForgetScenery();
 		I.PackFolder = Folder;
-		// XENO_ALIAS=<index> (headless tools): pictures found by content for uploads the pack has no name for (SetAliasIndex).
+		// XENO_ALIAS=<index> (headless tools): pictures found by content for uploads the pack has no name for (SetAliasIndex);
+		// XENO_ALIAS_TABLE=<csv>: the table of them (SetAliasTable); XENO_ALIAS_RECORD=<csv>: each lookup written as its line.
 		if (const char* Alias = std::getenv("XENO_ALIAS"); Alias != nullptr && I.AliasBySize.empty())
 		{
 			if (const std::string Error = SetAliasIndex(Alias); !Error.empty())
+			{
+				std::fprintf(stderr, "alias: %s\n", Error.c_str());
+			}
+		}
+		if (const char* Table = std::getenv("XENO_ALIAS_TABLE"); Table != nullptr && I.AliasByUpload.empty() && I.AliasByTexels.empty())
+		{
+			if (const std::string Error = SetAliasTable(Table); !Error.empty())
+			{
+				std::fprintf(stderr, "alias: %s\n", Error.c_str());
+			}
+		}
+		if (const char* Record = std::getenv("XENO_ALIAS_RECORD"); Record != nullptr && I.AliasRecord == nullptr)
+		{
+			if (const std::string Error = SetAliasRecord(Record); !Error.empty())
 			{
 				std::fprintf(stderr, "alias: %s\n", Error.c_str());
 			}

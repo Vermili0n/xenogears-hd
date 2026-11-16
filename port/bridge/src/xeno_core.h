@@ -49,6 +49,11 @@ namespace godot
 		String enter_field_keeping(int map);
 		/** The original texels of the pack's pictures (FSession::SetAliasIndex): pictures found by content; empty path: off. */
 		String set_alias_index(const String& path);
+		/** The table of pictures found by content, hashes only (FSession::SetAliasTable); empty path: off. */
+		String set_alias_table(const String& path);
+		int alias_table_rows() const;
+		/** Each lookup by content written as a line of the table into path (FSession::SetAliasRecord); empty path: off. */
+		String set_alias_record(const String& path);
 		/** The saves of a memory card image as text (slot -1), or that slot loaded and the game going on from it (empty, or an error). */
 		String load_card(const String& path, int slot);
 		/** The game's own saves (the File screen, the title's Continue) kept in this folder (Weltall's FSaveStore); empty, or an error. */

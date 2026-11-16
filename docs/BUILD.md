@@ -121,10 +121,18 @@ The game runs without it (original PlayStation textures). To use it:
 - extract the pack so that the pictures are in `port/pack/` (the default `pack=` is `pack` under `root=`), or
 - pass `pack=<folder>` to the game, for example RetroArch's `system/Xenogears (USA)-texture-replacements`.
 
-The optional `sprite_alias_index.bin` (published beside the pack) goes to `port/out/alias/sprite_alias_index.bin`
-or is passed as `alias_index=<file>`; `alias=0` turns that lookup off. It can be rebuilt with
-`tools/sprite_alias_index.py`, which needs the sprite pipeline's extracted parts (game data, not published) - set
-`XENO_EXTRACTED` and `XENO_DUMPS`.
+Pictures found by content (see `docs/HOW_IT_WORKS.md`) come from two files; the table is asked first:
+
+- `port/data/sprite_alias_table.csv` - in this repository, read by default (`alias_table=<file>` for another one).
+  Hashes and pack file names only. It was filled from the author's runs and answers there as the index does.
+- `sprite_alias_index.bin` - the content index. **Not published**: it holds the original texels of the game's sprites.
+  If you build it yourself with `tools/sprite_alias_index.py` (it needs the sprite pipeline's extracted parts, game
+  data - set `XENO_EXTRACTED` and `XENO_DUMPS`), put it into `port/out/alias/` or pass `alias_index=<file>`.
+
+`alias=0` turns both off. `alias_record=<file>` writes every lookup by content as a line of the table (picture `?`
+where nothing was found; with the index, the picture it found). `tools/sprite_alias_table.py` merges such files into
+the table; `tools/alias_table_runs.py` runs the headless sweeps the table was filled and measured with
+(`XENO_ALIAS_TABLE`, `XENO_ALIAS_RECORD`, `XENO_ALIAS` for the headless tools).
 
 Paths are relative to `root=` (default: the `port/` folder). See the header of `game/main.gd` for every argument.
 
@@ -138,7 +146,8 @@ third-party list). Environment:
 - `XENO_PACK=<pack folder>` (default `port/pack`) - copied with `robocopy /MIR`;
 - `XENO_OPENING_VIDEO=<mp4>` and `FFMPEG=<ffmpeg.exe>` - only if you have an HD video of the opening; without it
   (and without `out/movies/usa.disc1/13.ogv`) the `movies` folder is left out and the game shows its own movie;
-- `out/alias/sprite_alias_index.bin` must exist (the script copies it into `data/`).
+- `data/sprite_alias_table.csv` is copied into the folder's `data/`; `out/alias/sprite_alias_index.bin` is copied
+  too if you built it (it is not needed).
 
 The script refuses to finish if the folder contains a disc image, a memory card, a save or a state.
 

@@ -63,12 +63,21 @@ BC7 blocks - or `.png`; PNG wins when both exist). The core already computes the
   fails, the name of the "drawn rectangle" (the words the piece is drawn from, hashed like an upload); a piece lying
   across several uploads is cut and each part takes its own picture. A piece wider than its picture repeats the
   picture's edge texel instead of falling back to VRAM.
-- **By content** (`SetAliasIndex`, `sprite_alias_index.bin`): when no name matches, the texels of the upload (or
-  rectangle, or piece) are compared with the original texels behind every pack picture of the same size and palette.
-  A candidate is accepted when the texels opaque in both have the same colour within 8/255 per channel and at most
-  max(2, 5 %) texels are opaque in only one of them. This catches pieces the game alters slightly before upload and
-  Weltall's own stand-in pilot sprites. Texels the game draws but the original lacked are drawn from VRAM under the
-  picture.
+- **By content**: when no name matches, two sources are asked, in this order.
+  1. The table `data/sprite_alias_table.csv` (`SetAliasTable`, published): one line per substitution - what the game
+     draws, as hashes (an upload's Beetle name, or the CRC-32 of a rectangle's or piece's texels through its palette),
+     its size and palette, the pack picture to draw, and the few texels the game draws that the picture's original
+     lacks. It holds no texels of the game. It was recorded from the index on the author's runs (every field map from a
+     new game and from one story point, about a hundred of his saves through the whole game, every frame of the party's
+     sprites), so it only knows what was met there.
+  2. The index `sprite_alias_index.bin` (`SetAliasIndex`, not published: it holds the original texels): the texels of
+     the upload (or rectangle, or piece) are compared with the original texels behind every pack picture of the same
+     size and palette. A candidate is accepted when the texels opaque in both have the same colour within 8/255 per
+     channel and at most max(2, 5 %) texels are opaque in only one of them.
+
+  This catches pieces the game alters slightly before upload and Weltall's own stand-in pilot sprites. Texels the game
+  draws but the original lacked are drawn from VRAM under the picture. `alias_record=<file>` writes every lookup as a
+  table line (`?` where nothing was found), so a line can be added by hand.
 - **Loading**: pictures load on worker threads. Scenery pages show the original texels until they are ready. Sprite and
   2D pictures new in a frame are loaded with priority and the frame waits for them for up to about 17 ms
   ("lazy sync", as the author's emulator setting did), so animation frames do not flash low-resolution.

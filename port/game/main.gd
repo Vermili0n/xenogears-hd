@@ -7,7 +7,8 @@ extends Node3D
 ##
 ## Command line (after --): map=4 | boot=1 | card=<memory card image> slot=<N>  games=<folder> pack=<folder> hd=1 light=1
 ##   root=<folder> (what relative locations are under; by default the xeno_port folder: games weltall/Games, saves
-##   out/saves/game, states out/states, alias_index out/alias/sprite_alias_index.bin, movies out/movies)
+##   out/saves/game, states out/states, alias_index out/alias/sprite_alias_index.bin, alias_table
+##   data/sprite_alias_table.csv, movies out/movies)
 ##   lang=ru|en|auto (auto: the discs in the games folder found by content, the Russian translation's disc 1 first)
 ##   rus=<image> (lang=ru: the translation's image, games_ru/xenogears_rus_xz.CUE)  alias_index=<file>  movies=<folder>
 ##   (disc 2 is taken by the bridge where the game asks for it, found by content: the translation's disc 2 in the folder
@@ -19,7 +20,9 @@ extends Node3D
 ##   at=<seconds>:save|load|hold=<buttons>|snap,... (live play, for checks: F5 or F9 pressed, buttons held from then on,
 ##   the window's shot into shot_dir=<folder>, by default out/shots/live)
 ##   hdsync=0 (the pack's own pictures drawn from VRAM until loaded, as before), hdlog=<csv> (the HD loading, per frame and picture)
-##   alias=0 (no pictures found by content for uploads the pack has no name of, out/alias/sprite_alias_index.bin)
+##   alias=0 (no pictures found by content for uploads the pack has no name of: the table data/sprite_alias_table.csv,
+##   then the index out/alias/sprite_alias_index.bin)  alias_table=<csv>  alias_record=<csv> (each lookup by content
+##   written as a line of the table, the picture found or "?")
 ##   state=<file> map=<N> (that map entered from the state's point of the story, for checks)
 ##   world=0 / layer=0 (the 2D layer alone / the frame without it); the blend checks' layer_runs=, flat_f=, clear=,
 ##   checks=, as_blend= (tools/blend_check.py)
@@ -189,11 +192,18 @@ var upload_usec_longest := 0
 ## the sound's lead, process_started) and is built again with them. hdsync=0 draws VRAM's texels until they are ready
 ## (the earlier rule, for comparisons). A picture once loaded stays for the session (textures is never thinned for them).
 var hd_sync := true
-## alias=0: no pictures found by content (FSession::SetAliasIndex) - only the pack's own names, for comparisons.
-## alias_index=<file>: the index elsewhere (the mod folder's data\).
+## alias=0: no pictures found by content (FSession::SetAliasIndex, SetAliasTable) - only the pack's own names, for comparisons.
+## alias_index=<file>: the index elsewhere (the mod folder's data\). alias_table=<csv>: the table of what the index found,
+## hashes only (data/sprite_alias_table.csv, asked first; a build without the index has only it). alias_record=<csv>:
+## each lookup by content written as a line of the table (SetAliasRecord; off unless given).
 const ALIAS_INDEX := "out/alias/sprite_alias_index.bin"
+const ALIAS_TABLE := "data/sprite_alias_table.csv"
 var alias_on := true
 var alias_index := ""
+var alias_table := ""
+var alias_record := ""
+## What finds pictures by content in this run (_read_pack), for the frame report's settings line.
+var alias_found := "none"
 ## root=<folder>: what relative locations on the command line are under (by default the xeno_port folder, _from_root).
 var root_folder := ""
 ## A script, a shot or a timed run: nobody to read a message in the window (_fail_in_window quits instead).
@@ -390,6 +400,8 @@ func _ready() -> void:
 	pack_path = _from_root(args.get("pack", PACK))
 	alias_on = args.get("alias", "1") != "0"
 	alias_index = _from_root(args.get("alias_index", ALIAS_INDEX))
+	alias_table = _from_root(args.get("alias_table", ALIAS_TABLE))
+	alias_record = _from_root(args["alias_record"]) if args.has("alias_record") else ""
 	movies_folder = _from_root(args.get("movies", MOVIES))
 	if error.is_empty() and hd:
 		# No pack (its folder missing or unreadable): the game plays with the original's pictures, and says so.
@@ -1632,7 +1644,7 @@ func _frame_report() -> void:
 	# The disc in the drive (the second once the story or a save of it took it) and one the game waits on, if any.
 	lines.append("drive: disc %d (%s, %s)%s" % [int(before.get("drive_disc", 0)), before.get("drive_disc_id", ""), String(before.get("drive_disc_file", "")).replace("/", "\\"),
 		"; waiting on disc %d, not found in %s" % [int(before.get("disc_wanted", 0)), before.get("disc_wanted_folder", "")] if int(before.get("disc_wanted", 0)) > 0 else ""])
-	lines.append("settings: hd %s (pack %s, %d pictures, by content %s), light %s, dark places brightened %d (%s, F7), turbo %d (Tab adds x%d), hd_sync %s" % [hd, pack_path, core.pack_pictures(), alias_on, lit,
+	lines.append("settings: hd %s (pack %s, %d pictures, by content %s), light %s, dark places brightened %d (%s, F7), turbo %d (Tab adds x%d), hd_sync %s" % [hd, pack_path, core.pack_pictures(), alias_found if alias_on else "off", lit,
 		dark_level, DARK_NAMES[dark_level], turbo_rate, TURBO_KEY_RATE, hd_sync])
 	lines.append("shot.png: the window as shown, %d x %d; pictures still loading %d, primitives drawn from VRAM while their picture loads %d (info.waiting)" % [shot.get_width(), shot.get_height(), still_loading, int(before.get("waiting", 0))])
 	lines.append("shot_plain.png: %s" % ("the same frame with the pack, the light and the brightening of dark places off (F3, F2, F7), set back after" if hd_was or lit_was or dark_was > 0 else "the pack and the light were off already: the same picture"))
@@ -1781,14 +1793,28 @@ func _read_pack() -> String:
 	pack_read = error.is_empty() and core.pack_pictures() > 0
 	if error.is_empty() and not pack_read:
 		error = "no pictures in the pack folder " + pack_path
-	# The pictures the pack holds under other names, found by content (alias_index=, by default out/alias,
-	# tools/sprite_alias_index.py); alias=0: off.
-	var alias := ""
-	if pack_read and alias_on and FileAccess.file_exists(alias_index):
-		alias = core.set_alias_index(alias_index)
-		if not alias.is_empty():
-			push_warning("xeno: " + alias)
-	print("xeno: pack %d pictures in %d ms%s" % [core.pack_pictures(), Time.get_ticks_msec() - started, ", pictures by content" if alias_on and alias.is_empty() and FileAccess.file_exists(alias_index) else ""])
+	# The pictures the pack holds under other names, found by content: the table (alias_table=, by default
+	# data/sprite_alias_table.csv; hashes only, tools/sprite_alias_table.py), then the index (alias_index=, by default
+	# out/alias, tools/sprite_alias_index.py; not published: it holds the game's texels); alias=0: off.
+	var by_content := []
+	if pack_read and alias_on:
+		if FileAccess.file_exists(alias_table):
+			var table: String = core.set_alias_table(alias_table)
+			if not table.is_empty():
+				push_warning("xeno: " + table)
+			by_content.append("table %d lines" % core.alias_table_rows())
+		if FileAccess.file_exists(alias_index):
+			var alias: String = core.set_alias_index(alias_index)
+			if alias.is_empty():
+				by_content.append("index")
+			else:
+				push_warning("xeno: " + alias)
+		if not alias_record.is_empty():
+			var record: String = core.set_alias_record(alias_record)
+			if not record.is_empty():
+				push_warning("xeno: " + record)
+	alias_found = ", ".join(by_content) if not by_content.is_empty() else "none"
+	print("xeno: pack %d pictures in %d ms, pictures by content: %s" % [core.pack_pictures(), Time.get_ticks_msec() - started, alias_found])
 	return error
 
 

@@ -674,6 +674,24 @@ namespace Xeno
 		 * rule, xeno_sprites/tools/alias_dump_parts.py). Empty path: off. An error, or empty.
 		 */
 		std::string SetAliasIndex(const std::string& Path);
+		/**
+		 * The table of pictures found by content (data/sprite_alias_table.csv, tools/sprite_alias_table.py): what the index's
+		 * rule found, without the index's texels - a line "kind,width,height,hash,palette,picture,added" a substitution. kind
+		 * "upload": hash is the upload's CRC-32 as Beetle names it (the name the pack lacks is "<hash>-<palette>"); region-rect,
+		 * region-piece, port-rect, port-piece: the CRC-32 of the region's texels through its CLUT (0 transparent, else 0x8000 |
+		 * the colour, row by row), continuing from the palette's CRC-32. width x height in texels; picture the pack's file
+		 * name; added the texels the game draws that the picture's original lacked ("u:v" separated by spaces, drawn from VRAM
+		 * under it). '#' begins a comment; picture "?" is a line left to fill in. Asked before the index. Empty path: off.
+		 * An error or the lines not understood (the rest is kept), or empty.
+		 */
+		std::string SetAliasTable(const std::string& Path);
+		/** The table's lines kept (SetAliasTable). */
+		int AliasTableRows() const;
+		/**
+		 * Each upload or region compared by content (once a session) written into Path as a line of the table, appended: the
+		 * picture found (by the table or the index), or "?" where none was. Empty path: off. An error, or empty.
+		 */
+		std::string SetAliasRecord(const std::string& Path);
 		/** Forgets the pictures found through palettes agreeing on an upload's colours (as a new map in a sweep, Restart). */
 		void ForgetSamePalettes();
 		/**

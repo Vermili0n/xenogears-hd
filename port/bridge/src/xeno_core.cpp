@@ -358,6 +358,21 @@ namespace godot
 		return ToGodot(Session.SetAliasIndex(path.utf8().get_data()));
 	}
 
+	String XenoCore::set_alias_table(const String& path)
+	{
+		return ToGodot(Session.SetAliasTable(path.utf8().get_data()));
+	}
+
+	int XenoCore::alias_table_rows() const
+	{
+		return Session.AliasTableRows();
+	}
+
+	String XenoCore::set_alias_record(const String& path)
+	{
+		return ToGodot(Session.SetAliasRecord(path.utf8().get_data()));
+	}
+
 	String XenoCore::enter_field_keeping(int map)
 	{
 		return ToGodot(Session.EnterFieldKeeping(map));
@@ -989,6 +1004,9 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("enter_field", "map"), &XenoCore::enter_field);
 		ClassDB::bind_method(D_METHOD("enter_field_keeping", "map"), &XenoCore::enter_field_keeping);
 		ClassDB::bind_method(D_METHOD("set_alias_index", "path"), &XenoCore::set_alias_index);
+		ClassDB::bind_method(D_METHOD("set_alias_table", "path"), &XenoCore::set_alias_table);
+		ClassDB::bind_method(D_METHOD("alias_table_rows"), &XenoCore::alias_table_rows);
+		ClassDB::bind_method(D_METHOD("set_alias_record", "path"), &XenoCore::set_alias_record);
 		ClassDB::bind_method(D_METHOD("load_card", "path", "slot"), &XenoCore::load_card);
 		ClassDB::bind_method(D_METHOD("set_save_folder", "folder"), &XenoCore::set_save_folder);
 		ClassDB::bind_method(D_METHOD("save_state", "path"), &XenoCore::save_state);
