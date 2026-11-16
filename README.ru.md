@@ -6,6 +6,8 @@
 
 English: [README.md](README.md)
 
+![Xenogears HD: сцена в игре](docs/img/screenshot_bridge.png)
+
 ## Видео
 
 [![Xenogears HD: все смертельные приёмы Фея, Ситана и Эмеральды](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas)

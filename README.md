@@ -6,6 +6,8 @@ There are no game images here and there never will be — you need an image of y
 
 Русская версия: [README.ru.md](README.ru.md)
 
+![Xenogears HD: a scene in the game](docs/img/screenshot_bridge.png)
+
 ## Video
 
 [![Xenogears HD: all Deathblows of Fei, Citan and Emeralda](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas)

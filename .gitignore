@@ -53,8 +53,9 @@ __pycache__/
 *.7z
 *.tar
 
-# Pictures stay out of the code tree (screenshots go to the release page)
+# Pictures stay out of the code tree (the description's own screenshots in docs/img excepted)
 *.png
 *.jpg
 *.jpeg
 *.webp
+!docs/img/*.png
