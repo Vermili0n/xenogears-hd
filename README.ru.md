@@ -6,6 +6,12 @@
 
 English: [README.md](README.md)
 
+## Видео
+
+[![Xenogears HD: все смертельные приёмы Фея, Ситана и Эмеральды](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas)
+
+[Все 34 смертельных приёма Фея, Ситана и Эмеральды](https://www.youtube.com/watch?v=cxWjZwgbCas), запись прямо из игры (7 минут).
+
 ## Зачем я это сделал
 
 Я познакомился с Xenogears подростком, и меня поразила глубина её сюжета. Я не могу сказать, что играл во много JRPG, но сюжет этой игры считаю одним из лучших в жанре.

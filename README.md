@@ -6,6 +6,12 @@ There are no game images here and there never will be — you need an image of y
 
 Русская версия: [README.ru.md](README.ru.md)
 
+## Video
+
+[![Xenogears HD: all Deathblows of Fei, Citan and Emeralda](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas)
+
+[All 34 Deathblows of Fei, Citan and Emeralda](https://www.youtube.com/watch?v=cxWjZwgbCas), recorded straight from the game (7 minutes).
+
 ## Why I did this
 
 I first met Xenogears as a teenager, and the depth of its story struck me. I can't say I have played many JRPGs, but I consider this game's story one of the best in the genre.
