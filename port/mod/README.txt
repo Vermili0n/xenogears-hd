@@ -1,6 +1,12 @@
 XENOGEARS HD — how to play
 ==========================
 
+The HD pack. If the pack folder here is empty (the build was downloaded without the pack), download
+XenogearsHD_pack.zip (9.8 GB) and unpack it into this folder, so that its pack folder lies next to Play.cmd:
+   https://drive.google.com/file/d/1YDdp8Z_BPnRCgyAuMYRyH30flTckT9Gc/view?usp=sharing
+If the link no longer works, the current one is on the project's page: https://github.com/Vermili0n/xenogears-hd
+Without the pack the game runs with the original PlayStation graphics.
+
 1. Put a disc image of the game into the Games folder (next to this file).
    No disc images are included: they may not be shared, you need an image of your own disc.
    One of these two will do (the file name can be anything — the game knows a disc by its contents):
