@@ -154,6 +154,99 @@ namespace Xeno
 		};
 		FFlashCount FlashCount;
 
+		/**
+		 * XENO_PALETTE_COUNT=1 (for checks): an upload drawn again with the same texels under a palette that changed, counted
+		 * over the process and printed on stderr as it ends (FImpl::PictureName): by where (program, map) and whether the
+		 * picture found as the bridge finds it without the palette hold changed, was lost, was gained or stayed; the
+		 * palette's distance over the colours the upload's texels use (the largest channel difference, 5-bit units) as a
+		 * histogram; and the pictures the hold kept (per game frame and upload: how many, the largest distance held).
+		 * XENO_PALETTE_EVENTS=<file>: each change of picture as a CSV line; XENO_PALETTE_LOG=<file>: every upload's lookup,
+		 * once a game frame, as a CSV line.
+		 */
+		struct FPaletteCount
+		{
+			bool bOn = std::getenv("XENO_PALETTE_COUNT") != nullptr;
+			std::FILE* Events = nullptr;
+			std::FILE* Log = nullptr;
+			/** "<where>|<changed|lost|gained|same>" -> [largest channel difference 0..31] -> events. */
+			std::map<std::string, std::array<long long, 32>> Changes;
+			/** "<where>" -> lookups held (a game frame and an upload each), the uploads held, the largest distance held [max, mean x 100]. */
+			struct FHeld
+			{
+				long long Lookups = 0;
+				std::set<std::pair<uint32, uint32>> Uploads;
+				int LargestMax = 0, LargestMean100 = 0;
+				std::array<long long, 32> ByMax{};
+			};
+			std::map<std::string, FHeld> Held;
+
+			FPaletteCount()
+			{
+				if (const char* Path = std::getenv("XENO_PALETTE_EVENTS"))
+				{
+					Events = std::fopen(Path, "w");
+					if (Events != nullptr)
+					{
+						std::fprintf(Events, "frame,where,caller,page_x,page_y,depth,clut_x,clut_y,upload,palette_before,palette_now,name_before,name_now,how_before,how_now,"
+							"colours,changed_colours,max,mean,anchor_max,anchor_mean,held,shown\n");
+					}
+				}
+				if (const char* Path = std::getenv("XENO_PALETTE_LOG"))
+				{
+					Log = std::fopen(Path, "w");
+					if (Log != nullptr)
+					{
+						std::fprintf(Log, "frame,where,caller,page_x,page_y,depth,clut_x,clut_y,upload,palette,reduced,name,how,shown\n");
+					}
+				}
+				bOn = bOn || Events != nullptr || Log != nullptr;
+			}
+
+			~FPaletteCount()
+			{
+				if (Events != nullptr)
+				{
+					std::fclose(Events);
+				}
+				if (Log != nullptr)
+				{
+					std::fclose(Log);
+				}
+				if (!bOn)
+				{
+					return;
+				}
+				for (const auto& [What, Histogram] : Changes)
+				{
+					long long Total = 0;
+					std::string Bins;
+					for (std::size_t Max = 0; Max < Histogram.size(); ++Max)
+					{
+						Total += Histogram[Max];
+						if (Histogram[Max] != 0)
+						{
+							Bins += " " + std::to_string(Max) + ":" + std::to_string(Histogram[Max]);
+						}
+					}
+					std::fprintf(stderr, "palette count: %s %lld; by largest channel difference%s\n", What.c_str(), Total, Bins.c_str());
+				}
+				for (const auto& [Where, Held] : Held)
+				{
+					std::string Bins;
+					for (std::size_t Max = 0; Max < Held.ByMax.size(); ++Max)
+					{
+						if (Held.ByMax[Max] != 0)
+						{
+							Bins += " " + std::to_string(Max) + ":" + std::to_string(Held.ByMax[Max]);
+						}
+					}
+					std::fprintf(stderr, "palette held: %s lookups %lld uploads %zu largest max %d mean %.2f; by largest channel difference%s\n", Where.c_str(),
+						Held.Lookups, Held.Uploads.size(), Held.LargestMax, Held.LargestMean100 / 100.0, Bins.c_str());
+				}
+			}
+		};
+		FPaletteCount PaletteCount;
+
 		/** A corner as the shaders take it. */
 		struct FCorner
 		{
@@ -1254,6 +1347,9 @@ namespace Xeno
 			SceneryMixed.clear();
 			PageStates.clear();
 			UsedIndices.clear();
+			// The palette hold's anchors are the scene's (SetOptions keeps them: the same scene drawn another way).
+			PaletteSeen[0].clear();
+			PaletteSeen[1].clear();
 		}
 
 		bool HasPicture(const FBeetleTexturePart& Part) const
@@ -1365,6 +1461,7 @@ namespace Xeno
 				return Found->second;
 			}
 			const std::vector<FBeetleTexturePart> Parts = PartsUnder(Vram, Page, Clut, U0, V0, Wide, High);
+			const FCallerScope Caller(PictureCaller, SceneryCaller);
 			bool bMixed = Parts.empty();
 			int Covered = 0;
 			for (const FBeetleTexturePart& Part : Parts)
@@ -1497,6 +1594,7 @@ namespace Xeno
 			const int Per = TexelsPerUnit(Page.Depth);
 			const std::vector<FBeetleTexturePart> Parts = BeetleTextureParts(Vram, Region);
 			bool bCovered = false;
+			const FCallerScope Caller(PictureCaller, bSprite ? "sprite" : "piece");
 			for (const FBeetleTexturePart& Part : Parts)
 			{
 				if (Part.U != 0 || Part.V != 0 || Part.Width < Wide || Part.Height < High)
@@ -1668,6 +1766,7 @@ namespace Xeno
 				return Found->second;
 			}
 			uint32 State = 0;
+			const FCallerScope Caller(PictureCaller, SceneryCaller);
 			for (const FBeetleTexturePart& Part : BeetleTextureParts(Vram, WholePage(View)))
 			{
 				if (const uint64 Name = PictureName(Vram, View, Part))
@@ -1692,14 +1791,14 @@ namespace Xeno
 		/** The CLUT indices the texels of an upload's parts under a page use, by upload and texture view (for the scene in VRAM). */
 		mutable std::unordered_map<uint64, std::array<uint64, 4>> UsedIndices;
 
-		uint64 UsedColoursKey(const FVram& Vram, uint32 View, const FBeetleTexturePart& Part) const
+		/** The CLUT indices an upload's texels use through View (UsedIndices), null for a direct page or the port's own rows. */
+		const std::array<uint64, 4>* UsedIndicesOf(const FVram& Vram, uint32 View, const FBeetleTexturePart& Part) const
 		{
 			const FTexturePage Page = TextureViewPage(View);
 			if (Page.Depth == ETextureDepth::Direct15 || Page.Y >= FVram::Height)
 			{
-				return 0;
+				return nullptr;
 			}
-			const FClutPosition Clut = TextureViewClut(View);
 			const uint64 UsedKey = static_cast<uint64>(Part.Upload) << 32 | View;
 			auto Found = UsedIndices.find(UsedKey);
 			if (Found == UsedIndices.end())
@@ -1724,13 +1823,25 @@ namespace Xeno
 				}
 				Found = UsedIndices.emplace(UsedKey, Used).first;
 			}
+			return &Found->second;
+		}
+
+		uint64 UsedColoursKey(const FVram& Vram, uint32 View, const FBeetleTexturePart& Part) const
+		{
+			const std::array<uint64, 4>* Used = UsedIndicesOf(Vram, View, Part);
+			if (Used == nullptr)
+			{
+				return 0;
+			}
+			const FTexturePage Page = TextureViewPage(View);
+			const FClutPosition Clut = TextureViewClut(View);
 			uint64 Hash = 1469598103934665603ull;
 			const auto Fold = [&Hash](uint64 Value) { Hash = (Hash ^ Value) * 1099511628211ull; };
 			Fold(Part.Upload);
 			Fold(static_cast<uint64>(Page.Depth));
 			for (int Index = 0; Index < 256; ++Index)
 			{
-				if ((Found->second[static_cast<std::size_t>(Index >> 6)] >> (Index & 63) & 1) != 0)
+				if (((*Used)[static_cast<std::size_t>(Index >> 6)] >> (Index & 63) & 1) != 0)
 				{
 					Fold(static_cast<uint64>(Index) << 16 | Vram.TexelAt(Clut.X + Index, Clut.Y));
 				}
@@ -1738,8 +1849,96 @@ namespace Xeno
 			return Hash | 1;
 		}
 
+		/** The colours an upload's texels use through View, in the order of their CLUT indices (empty where UsedIndicesOf has none). */
+		std::vector<uint16> UsedColours(const FVram& Vram, uint32 View, const FBeetleTexturePart& Part) const
+		{
+			std::vector<uint16> Colours;
+			const std::array<uint64, 4>* Used = UsedIndicesOf(Vram, View, Part);
+			if (Used == nullptr)
+			{
+				return Colours;
+			}
+			const FClutPosition Clut = TextureViewClut(View);
+			for (int Index = 0; Index < 256; ++Index)
+			{
+				if (((*Used)[static_cast<std::size_t>(Index >> 6)] >> (Index & 63) & 1) != 0)
+				{
+					Colours.push_back(Vram.TexelAt(Clut.X + Index, Clut.Y));
+				}
+			}
+			return Colours;
+		}
+
+		/**
+		 * How far two palettes lie apart over the colours an upload uses (UsedColours of the same upload and view): the largest
+		 * difference of one channel (5-bit units, 0..31) and the mean over every used colour's three channels. A colour
+		 * turning transparent (0000h) or back, or changing its semi-transparency bit, is as far as a colour can be (31).
+		 */
+		struct FPaletteDistance
+		{
+			int Max = 0;
+			double Mean = 0.0;
+			int Changed = 0;
+		};
+
+		static FPaletteDistance PaletteDistance(const std::vector<uint16>& A, const std::vector<uint16>& B)
+		{
+			FPaletteDistance Distance;
+			if (A.size() != B.size() || A.empty())
+			{
+				Distance.Max = 31;
+				Distance.Mean = 31.0;
+				return Distance;
+			}
+			long long Sum = 0;
+			for (std::size_t Colour = 0; Colour < A.size(); ++Colour)
+			{
+				const uint16 X = A[Colour], Y = B[Colour];
+				if (X == Y)
+				{
+					continue;
+				}
+				++Distance.Changed;
+				if ((X == 0) != (Y == 0) || (X & 0x8000) != (Y & 0x8000))
+				{
+					Distance.Max = 31;
+					Sum += 3 * 31;
+					continue;
+				}
+				for (int Shift = 0; Shift < 15; Shift += 5)
+				{
+					const int Channel = std::abs((X >> Shift & 31) - (Y >> Shift & 31));
+					Distance.Max = std::max(Distance.Max, Channel);
+					Sum += Channel;
+				}
+			}
+			Distance.Mean = static_cast<double>(Sum) / static_cast<double>(3 * A.size());
+			return Distance;
+		}
+
+		/** How a picture was found (PictureNameAsToday): none, by the full palette's name, the reduced palette's, a palette agreeing on the used colours, by content. */
+		enum class EFoundBy : uint8
+		{
+			None,
+			Own,
+			Reduced,
+			SameColours,
+			Content
+		};
+		static const char* FoundByName(EFoundBy By)
+		{
+			switch (By)
+			{
+			case EFoundBy::Own: return "own";
+			case EFoundBy::Reduced: return "reduced";
+			case EFoundBy::SameColours: return "same-colours";
+			case EFoundBy::Content: return "content";
+			default: return "none";
+			}
+		}
+
 		/** The pack's picture of an upload's part through View: by its own names, or one found through a palette agreeing on its colours; 0 none. */
-		uint64 PictureName(const FVram& Vram, uint32 View, const FBeetleTexturePart& Part, bool bByContent = false) const
+		uint64 PictureNameAsToday(const FVram& Vram, uint32 View, const FBeetleTexturePart& Part, bool bByContent, EFoundBy& By) const
 		{
 			for (const uint32 Palette : {Part.Palette, Part.ReducedPalette})
 			{
@@ -1749,6 +1948,7 @@ namespace Xeno
 					{
 						SamePalettePictures.emplace(Same, PackKey(Part.Upload, Palette));
 					}
+					By = Palette == Part.Palette ? EFoundBy::Own : EFoundBy::Reduced;
 					return PackKey(Part.Upload, Palette);
 				}
 			}
@@ -1756,9 +1956,236 @@ namespace Xeno
 			const auto Found = Same != 0 ? SamePalettePictures.find(Same) : SamePalettePictures.end();
 			if (Found != SamePalettePictures.end())
 			{
+				By = EFoundBy::SameColours;
 				return Found->second;
 			}
-			return bByContent ? AliasName(Vram, View, Part) : 0;
+			const uint64 Name = bByContent ? AliasName(Vram, View, Part) : 0;
+			By = Name != 0 ? EFoundBy::Content : EFoundBy::None;
+			return Name;
+		}
+
+		/**
+		 * The palette hold (SetPaletteHold, on by default): per upload drawn through a texture view (its texels and the CLUT's
+		 * place), the picture shown and the colours its texels used then - the anchor. When the same texels come again under
+		 * a palette whose used colours lie within PaletteHoldMax of the anchor's (largest channel difference, 5-bit units),
+		 * the anchor's picture is shown, also where the new palette has none; beyond it the picture is found as before and
+		 * becomes the anchor. The distance is always to the anchor, so a fade passes the bound and changes the picture.
+		 * Under the anchor's own palette the picture is the one found now. Forgotten with the scene (a new map, battle,
+		 * world map scene, a state loaded, another pack); kept over a change of options (F2/F3, F6's plain shot).
+		 */
+		struct FPaletteSeen
+		{
+			/** The last palette the upload was looked up under, its used colours, the picture found then (as before the hold), how. */
+			uint32 Palette = 0;
+			std::vector<uint16> Colours;
+			uint64 Name = 0;
+			EFoundBy By = EFoundBy::None;
+			/** The anchor: its palette, used colours, picture; the game frame it was set. */
+			uint32 AnchorPalette = 0;
+			std::vector<uint16> AnchorColours;
+			uint64 AnchorName = 0;
+			long long AnchorFrame = 0;
+			/** The last game frame this upload was logged, counted held (XENO_PALETTE_LOG, XENO_PALETTE_COUNT). */
+			long long LoggedFrame = -1, HeldFrame = -1;
+		};
+		/**
+		 * By the upload (high 32 bits) and the texture view; [0] the models' polygons (the scenery's pages: the class the hold
+		 * keeps pictures for), [1] other lookups by name only, [2] other lookups with pictures found by content (sprite pieces,
+		 * 2D: only counted, XENO_PALETTE_COUNT; their pictures are always the ones found now).
+		 */
+		mutable std::array<std::unordered_map<uint64, FPaletteSeen>, 3> PaletteSeen;
+		bool bPaletteHold = std::getenv("XENO_PALHOLD") == nullptr || std::atoi(std::getenv("XENO_PALHOLD")) != 0;
+		/**
+		 * The hold's bound: the largest channel difference (5-bit units) of a used colour from the anchor's that still holds.
+		 * Measured (XENO_PALETTE_COUNT over the story's states and a playthrough's saved states, 150 field maps, the world map's
+		 * 144 entries, the arena, a new game, a gear battle): the models' changes of picture fall at 0 (the world map's
+		 * water shimmer in CLUT columns the land does not use: the pack's pictures of one upload under several such states
+		 * drawn in different manners), 1 (a battle stage's whole palette one unit off for a while: its pictures lost), then 6-12
+		 * (the water's own colour cycle, 8 used colours rotating) and 17-28 (a field's palette swapped). 2 lies in the gap.
+		 */
+		static constexpr int PaletteHoldMax = 2;
+		/**
+		 * What looks the uploads up now: SceneryCaller for a model's polygon (PushScenery: the scenery, the battle's stage and 3D
+		 * objects, gears' models, the world map's terrain and models; the pages built for them) - the only class the palette
+		 * hold keeps pictures for; "sprite", "piece" (Resolve), "split" (PushSplit) or "other" for the rest (characters'
+		 * pieces, the 2D layer), which always get the picture found now and are only counted (XENO_PALETTE_COUNT).
+		 */
+		static constexpr const char* SceneryCaller = "scenery";
+		mutable const char* PictureCaller = "other";
+		/** A picture the hold kept while a frame report is built: "<picture> for <upload>-<palette> ..." -> lookups. */
+		mutable std::map<std::string, int> ReportHeld;
+		/** Lookups the hold kept since the last BuildWorld began (Info's PaletteHeld). */
+		mutable int PaletteHeldLookups = 0;
+
+		struct FCallerScope
+		{
+			const char*& Slot;
+			const char* Before;
+			FCallerScope(const char*& InSlot, const char* Now) : Slot(InSlot), Before(InSlot) { Slot = Now; }
+			~FCallerScope() { Slot = Before; }
+		};
+
+		/** Where the game is, for XENO_PALETTE_COUNT: the program and the field's map or the world map's scene. */
+		std::string PaletteWhere() const
+		{
+			if (RunningMenu() != nullptr)
+			{
+				return "menu";
+			}
+			if (Battle() != nullptr)
+			{
+				return "battle";
+			}
+			if (Battling() != nullptr)
+			{
+				return "arena";
+			}
+			if (const FWorldMapProgram* Map = WorldMap())
+			{
+				return "world " + std::to_string(Map->Runtime().Context().SceneNumber);
+			}
+			if (const FFieldProgram* Running = Field())
+			{
+				return "field " + std::to_string(Running->Runtime().Context().RunningMap);
+			}
+			return "other";
+		}
+
+		/** The pack's picture of an upload's part through View as shown: PictureNameAsToday under the palette hold (FPaletteSeen). */
+		uint64 PictureName(const FVram& Vram, uint32 View, const FBeetleTexturePart& Part, bool bByContent = false) const
+		{
+			EFoundBy By = EFoundBy::None;
+			const uint64 Today = PictureNameAsToday(Vram, View, Part, bByContent, By);
+			// The hold is the models' polygons' only (PictureCaller): sprite pieces and the 2D layer get the picture found now.
+			const bool bScenery = PictureCaller == SceneryCaller;
+			const bool bHolds = bPaletteHold && bScenery;
+			if (!bHolds && !PaletteCount.bOn)
+			{
+				return Today;
+			}
+			const FTexturePage Page = TextureViewPage(View);
+			if (Page.Depth == ETextureDepth::Direct15 || Page.Y >= FVram::Height)
+			{
+				return Today;
+			}
+			auto& Seen = PaletteSeen[bScenery ? 0 : bByContent ? 2 : 1];
+			const uint64 Key = static_cast<uint64>(Part.Upload) << 32 | View;
+			auto Found = Seen.find(Key);
+			if (Found == Seen.end())
+			{
+				FPaletteSeen First;
+				First.Palette = First.AnchorPalette = Part.Palette;
+				First.Colours = UsedColours(Vram, View, Part);
+				First.AnchorColours = First.Colours;
+				First.Name = First.AnchorName = Today;
+				First.By = By;
+				First.AnchorFrame = FramesAfter;
+				Found = Seen.emplace(Key, std::move(First)).first;
+				LogLookup(Found->second, View, Part, Today, By, Today);
+				return Today;
+			}
+			FPaletteSeen& S = Found->second;
+			uint64 Shown = Today;
+			if (Part.Palette != S.Palette)
+			{
+				// The same texels under another palette than the last lookup's: counted as found before the hold.
+				std::vector<uint16> Colours = UsedColours(Vram, View, Part);
+				if (PaletteCount.bOn)
+				{
+					const FPaletteDistance Step = PaletteDistance(S.Colours, Colours);
+					const FPaletteDistance FromAnchor = PaletteDistance(S.AnchorColours, Colours);
+					const char* Kind = Today == S.Name ? "same" : Today == 0 ? "lost" : S.Name == 0 ? "gained" : "changed";
+					const std::string Where = PaletteWhere();
+					++PaletteCount.Changes[Where + "|" + PictureCaller + "|" + Kind][static_cast<std::size_t>(std::clamp(Step.Max, 0, 31))];
+					if (PaletteCount.Events != nullptr && Today != S.Name)
+					{
+						const FClutPosition Clut = TextureViewClut(View);
+						const bool bHeld = bHolds && Part.Palette != S.AnchorPalette && FromAnchor.Max <= PaletteHoldMax && S.AnchorName != 0;
+						std::fprintf(PaletteCount.Events, "%lld,%s,%s,%d,%d,%d,%d,%d,%08x,%08x,%08x,%016llx,%016llx,%s,%s,%zu,%d,%d,%.3f,%d,%.3f,%d,%016llx\n", FramesAfter,
+							Where.c_str(), PictureCaller, Page.X, Page.Y, static_cast<int>(Page.Depth), Clut.X, Clut.Y, Part.Upload, S.Palette, Part.Palette,
+							static_cast<unsigned long long>(S.Name), static_cast<unsigned long long>(Today), FoundByName(S.By), FoundByName(By), Colours.size(), Step.Changed,
+							Step.Max, Step.Mean, FromAnchor.Max, FromAnchor.Mean, bHeld ? 1 : 0, static_cast<unsigned long long>(bHeld ? S.AnchorName : Today));
+					}
+				}
+				S.Palette = Part.Palette;
+				S.Colours = std::move(Colours);
+				S.Name = Today;
+				S.By = By;
+			}
+			else if (Today != S.Name)
+			{
+				// The same palette, a picture found since (by colours or content seen meanwhile).
+				S.Name = Today;
+				S.By = By;
+			}
+			if (Part.Palette == S.AnchorPalette)
+			{
+				// Under the anchor's own palette: the picture found now (as before the hold).
+				S.AnchorName = Today;
+			}
+			else
+			{
+				const FPaletteDistance FromAnchor = PaletteDistance(S.AnchorColours, S.Colours);
+				if (bHolds && FromAnchor.Max <= PaletteHoldMax && S.AnchorName != 0)
+				{
+					Shown = S.AnchorName;
+					if (Shown != Today)
+					{
+						NoteHeld(S, View, Part, Today, FromAnchor);
+					}
+				}
+				else
+				{
+					S.AnchorPalette = Part.Palette;
+					S.AnchorColours = S.Colours;
+					S.AnchorName = Today;
+					S.AnchorFrame = FramesAfter;
+				}
+			}
+			LogLookup(S, View, Part, Today, By, Shown);
+			return Shown;
+		}
+
+		/** XENO_PALETTE_LOG: an upload's lookup, once a game frame. */
+		void LogLookup(FPaletteSeen& S, uint32 View, const FBeetleTexturePart& Part, uint64 Today, EFoundBy By, uint64 Shown) const
+		{
+			if (PaletteCount.Log == nullptr || S.LoggedFrame == FramesAfter)
+			{
+				return;
+			}
+			S.LoggedFrame = FramesAfter;
+			const FTexturePage Page = TextureViewPage(View);
+			const FClutPosition Clut = TextureViewClut(View);
+			std::fprintf(PaletteCount.Log, "%lld,%s,%s,%d,%d,%d,%d,%d,%08x,%08x,%08x,%016llx,%s,%016llx\n", FramesAfter, PaletteWhere().c_str(), PictureCaller, Page.X,
+				Page.Y, static_cast<int>(Page.Depth), Clut.X, Clut.Y, Part.Upload, Part.Palette, Part.ReducedPalette, static_cast<unsigned long long>(Today),
+				FoundByName(By), static_cast<unsigned long long>(Shown));
+		}
+
+		/** A picture the hold kept in place of the one found now: counted (XENO_PALETTE_COUNT) and noted in a frame report. */
+		void NoteHeld(FPaletteSeen& S, uint32 View, const FBeetleTexturePart& Part, uint64 Today, const FPaletteDistance& Distance) const
+		{
+			++PaletteHeldLookups;
+			if (Report != nullptr)
+			{
+				const FClutPosition Clut = TextureViewClut(View);
+				char Line[320];
+				std::snprintf(Line, sizeof(Line), "%x-%x shown for %s (now %s), CLUT %d,%d: used colours %zu, %d changed, largest channel difference %d, mean %.2f "
+					"(5-bit units) from the palette %x it was chosen under at game frame %lld", static_cast<uint32>(S.AnchorName >> 32), static_cast<uint32>(S.AnchorName),
+					BeetleTextureFileName({Part.Upload, Part.Palette}).c_str(),
+					Today != 0 ? (BeetleTextureFileName({static_cast<uint32>(Today >> 32), static_cast<uint32>(Today)}) + " would be shown").c_str() : "no picture: VRAM would be shown",
+					Clut.X, Clut.Y, S.Colours.size(), Distance.Changed, Distance.Max, Distance.Mean, S.AnchorPalette, S.AnchorFrame);
+				++ReportHeld[Line];
+			}
+			if (PaletteCount.bOn && S.HeldFrame != FramesAfter)
+			{
+				S.HeldFrame = FramesAfter;
+				FPaletteCount::FHeld& Held = PaletteCount.Held[PaletteWhere() + "|" + PictureCaller];
+				++Held.Lookups;
+				Held.Uploads.insert({Part.Upload, View});
+				Held.LargestMax = std::max(Held.LargestMax, Distance.Max);
+				Held.LargestMean100 = std::max(Held.LargestMean100, static_cast<int>(std::lround(Distance.Mean * 100.0)));
+				++Held.ByMax[static_cast<std::size_t>(std::clamp(Distance.Max, 0, 31))];
+			}
 		}
 
 		/**
@@ -2465,6 +2892,7 @@ namespace Xeno
 					Quad[Corner].U = U;
 					Quad[Corner].V = V;
 				}
+				const FCallerScope Caller(PictureCaller, "split");
 				const uint64 Name = PictureName(Vram, Region.View, Part, true);
 				const uint8* Kind = Name != 0 ? InPack(Name) : nullptr;
 				if (Kind == nullptr || !IsReady(PathOf(Name, *Kind)))
@@ -2505,6 +2933,8 @@ namespace Xeno
 			const FTexturePage& Page, const FClutPosition& Clut, EBlend Blend)
 		{
 			const uint32 PageView = PackTextureView(Page, Clut);
+			// Every lookup for a model's polygon (its page's pictures, the report's notes) is the scenery's: the palette hold's class.
+			const FCallerScope Caller(PictureCaller, SceneryCaller);
 			const bool bPictures = bTextured && Options.bHd && !Pack.empty() && Page.Y < FVram::Height && PageState(Vram, PageView) != 0;
 			// The page's picture of the pictures laid in now: each state its own (an animated palette's may change them).
 			char Key[32];
@@ -5682,6 +6112,7 @@ namespace Xeno
 		}
 		// Each upload the pack has a picture of.
 		Job.Per = TexelsPerUnit(Page.Depth);
+		const FImpl::FCallerScope Caller(I.PictureCaller, FImpl::SceneryCaller);
 		for (const FBeetleTexturePart& Part : BeetleTextureParts(Vram, FImpl::WholePage(View)))
 		{
 			const uint64 Name = I.PictureName(Vram, View, Part);
@@ -5834,7 +6265,10 @@ namespace Xeno
 	void FSession::SetOptions(const FDrawOptions& Options)
 	{
 		Impl->Options = Options;
+		// The palette hold's anchors outlive a change of options: the scene is the same, drawn with or without the pack.
+		auto Anchors = std::move(Impl->PaletteSeen);
 		Impl->ForgetScenery();
+		Impl->PaletteSeen = std::move(Anchors);
 	}
 
 	std::string FSession::EnterField(int Number)
@@ -6338,6 +6772,7 @@ namespace Xeno
 		FImpl::FFrameReport Report;
 		std::vector<FSurface> World, Screen;
 		Report.Lines = "== The world (the scene: scenery, models, sprites, particles; a battle's, the world map's, the arena's scene)\n";
+		I.ReportHeld.clear();
 		I.Report = &Report;
 		BuildWorld(World);
 		I.Report->Lines += "== The 2D layer\n";
@@ -6426,6 +6861,15 @@ namespace Xeno
 		{
 			Out += Name + "\n";
 		}
+		// The palette hold (SetPaletteHold): pictures shown in place of the one the palette drawn now names, and why.
+		std::snprintf(Line, sizeof(Line), "== Pictures kept by the palette hold (palhold %s, bound: largest channel difference %d of 31): %zu\n",
+			I.bPaletteHold ? "on" : "off", FImpl::PaletteHoldMax, I.ReportHeld.size());
+		Out += Line;
+		for (const auto& [Held, Count] : I.ReportHeld)
+		{
+			Out += "  " + Held + "  (" + std::to_string(Count) + " lookups)\n";
+		}
+		I.ReportHeld.clear();
 		Out += "== What the frame holds that the bridge leaves undrawn or draws by a stand-in (classes with a count)\n";
 		for (const FUnhandled& Class : Unhandled())
 		{
@@ -6793,6 +7237,7 @@ namespace Xeno
 	{
 		FFrameInfo Info;
 		const FImpl& I = *Impl;
+		Info.PaletteHeld = I.PaletteHeldLookups;
 		Info.HdUpload = I.HdUpload;
 		Info.HdRect = I.HdRect;
 		Info.HdSplit = I.HdSplit;
@@ -7476,6 +7921,7 @@ namespace Xeno
 	{
 		FImpl& I = *Impl;
 		I.bCountLayer = false;
+		I.PaletteHeldLookups = 0;
 		// For checks (Unhandled): the triangles of the scene that blend, however BuildWorld returns.
 		struct FBlendedCount
 		{
@@ -8742,6 +9188,16 @@ namespace Xeno
 	int FSession::ProgramRuns() const
 	{
 		return Impl->Loop ? Impl->Loop->ProgramRuns() : 0;
+	}
+
+	void FSession::SetPaletteHold(bool bOn)
+	{
+		Impl->bPaletteHold = bOn;
+	}
+
+	bool FSession::PaletteHold() const
+	{
+		return Impl->bPaletteHold;
 	}
 
 	void FSession::SetBattleFlashes(int Level)

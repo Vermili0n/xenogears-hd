@@ -582,6 +582,16 @@ namespace godot
 		return Session.BattleFlashes();
 	}
 
+	void XenoCore::set_palette_hold(bool on)
+	{
+		Session.SetPaletteHold(on);
+	}
+
+	bool XenoCore::palette_hold() const
+	{
+		return Session.PaletteHold();
+	}
+
 	int XenoCore::sound_rate() const
 	{
 		return Xeno::FSession::SoundRate();
@@ -682,6 +692,8 @@ namespace godot
 		}
 		Out["battle_fade"] = Fade;
 		Out["battle_flash_share"] = Info.FlashShare;
+		// The palette hold: lookups whose picture it kept in the last scene built (FSession::SetPaletteHold).
+		Out["palette_held"] = Info.PaletteHeld;
 		// The screens beside the field and the battle: the loop's stage, what shows (xeno_session.h EScreenKind), the menu,
 		// the movie, the field's picture of the screen, a chapter's card, the 2D layer built last.
 		Out["stage"] = Info.Stage;
@@ -1058,5 +1070,7 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("program_runs"), &XenoCore::program_runs);
 		ClassDB::bind_method(D_METHOD("set_battle_flashes", "level"), &XenoCore::set_battle_flashes);
 		ClassDB::bind_method(D_METHOD("battle_flashes"), &XenoCore::battle_flashes);
+		ClassDB::bind_method(D_METHOD("set_palette_hold", "on"), &XenoCore::set_palette_hold);
+		ClassDB::bind_method(D_METHOD("palette_hold"), &XenoCore::palette_hold);
 	}
 }

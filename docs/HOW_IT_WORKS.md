@@ -78,6 +78,24 @@ BC7 blocks - or `.png`; PNG wins when both exist). The core already computes the
   This catches pieces the game alters slightly before upload and Weltall's own stand-in pilot sprites. Texels the game
   draws but the original lacked are drawn from VRAM under the picture. `alias_record=<file>` writes every lookup as a
   table line (`?` where nothing was found), so a line can be added by hand.
+- **Palette hold** (`palhold=1|0`, on by default): a pack name carries the CRC of the whole palette, every colour of
+  it, whether the upload's texels use it or not. The world map animates its water by rewriting the last 8 entries of
+  two CLUT rows, entries the land's uploads never use: the land keeps its colours, but its name changes with each state
+  of the water's cycle, and the pack has pictures of the land under several of those states, drawn in different
+  manners. So about once a second the land switched for a few frames to another, differently drawn HD picture. The
+  rule: when a model's texture comes again with the same texels under a palette whose colours used by those texels lie
+  within 2 of 31 (the largest difference of one 5-bit channel) of the palette its picture was chosen under, that
+  picture stays, also where the new palette has none; beyond the bound the picture is looked up anew and the distance
+  is counted from there, so a fade passes the bound and changes the picture. Only models' textures (scenery, the
+  world map's land and models, battle stages, gears) are held; characters' sprite pieces and the 2D layer always get
+  the picture their palette names. The bound is measured: counting every such change of picture over the story's
+  states, a playthrough's saved states, all 730 field maps, the world map's entries, the arena and battles, the
+  models' changes fall at 0 (the land) and 1 (a battle stage dimmed by one step), then at 6-12 (the water's own colour
+  cycle) and 17-28 (a field's palette really swapped); nothing lies between 1 and 6. In practice it holds pictures
+  on the world map (always at distance 0) and for a few frames of a battle stage being dimmed. `palhold=0`
+  switches it off (every lookup as before); F6's `frame.txt` lists the pictures kept and what they stand in for.
+  Left as it is: the world map's water still alternates between HD and original pixels, as the pack has pictures for
+  3 of the 5 states of its colour cycle (holding it would freeze the cycle).
 - **Loading**: pictures load on worker threads. Scenery pages show the original texels until they are ready. Sprite and
   2D pictures new in a frame are loaded with priority and the frame waits for them for up to about 17 ms
   ("lazy sync", as the author's emulator setting did), so animation frames do not flash low-resolution.

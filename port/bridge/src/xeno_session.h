@@ -307,6 +307,8 @@ namespace Xeno
 		std::array<int, 3> FadeColour{};
 		bool bFadeFromEffect = false;
 		float FlashShare = 1.0f;
+		/** The last scene and 2D layer built: lookups whose picture the palette hold kept in place of the one found now (SetPaletteHold). */
+		int PaletteHeld = 0;
 		/** The loop's stage (FGameLoop: 0 boot, 1 a program, 2 soft reset, 3 stopped) and what the display shows. */
 		int Stage = -1;
 		EScreenKind Screen = EScreenKind::Blank;
@@ -755,6 +757,13 @@ namespace Xeno
 		 */
 		void SetBattleFlashes(int Level);
 		int BattleFlashes() const;
+		/**
+		 * The palette hold (on by default; XENO_PALHOLD=0 starts a session without it): an upload drawn again with the same
+		 * texels under a palette whose used colours lie within a small bound of the palette its picture was chosen under keeps
+		 * that picture (FImpl::PictureName). Off: every lookup as before the hold.
+		 */
+		void SetPaletteHold(bool bOn);
+		bool PaletteHold() const;
 		/** The pace the game runs at now: the turbo where it applies, else 1. */
 		int GamePace() const;
 		/** How many programs have started (a new one: a battle, a map, the world map). */

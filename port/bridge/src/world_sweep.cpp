@@ -17,7 +17,8 @@
 
 namespace
 {
-	constexpr int BuildEvery = 30;
+	/** The builds: every 30th frame and the last (XENO_BUILD_EVERY=<n>: every n-th instead, for the palette counts' finer steps). */
+	const int BuildEvery = std::getenv("XENO_BUILD_EVERY") != nullptr && std::atoi(std::getenv("XENO_BUILD_EVERY")) > 0 ? std::atoi(std::getenv("XENO_BUILD_EVERY")) : 30;
 	/** The story values eras 1 to 8 begin at (SortingAudit.cpp, EraStarts); era 8 plays on disc 2, which is not here. */
 	constexpr std::array<int, 7> EraStarts = {24, 54, 135, 149, 186, 198, 204};
 	constexpr int PlayableScene = 1;

@@ -23,6 +23,9 @@ extends Node3D
 ##   at=<seconds>:save|load|hold=<buttons>|snap,... (live play, for checks: F5 or F9 pressed, buttons held from then on,
 ##   the window's shot into shot_dir=<folder>, by default out/shots/live)
 ##   hdsync=0 (the pack's own pictures drawn from VRAM until loaded, as before), hdlog=<csv> (the HD loading, per frame and picture)
+##   palhold=1|0 (the palette hold, on by default: the same texels drawn again under a palette whose used colours barely
+##   changed keep the pack's picture chosen before, FSession::SetPaletteHold; 0 looks each palette's picture up anew, as
+##   before the hold, for comparisons)
 ##   alias=0 (no pictures found by content for uploads the pack has no name of: the table data/sprite_alias_table.csv,
 ##   then the index out/alias/sprite_alias_index.bin)  alias_table=<csv>  alias_record=<csv> (each lookup by content
 ##   written as a line of the table, the picture found or "?")
@@ -606,6 +609,9 @@ func _ready() -> void:
 	flash_log = args.get("flashlog", "0") == "1"
 	button_log = _from_root(args["buttonlog"]) if args.has("buttonlog") else ""
 	print("xeno: battle flashes %d (%s, from %s)" % [flash_level, FLASH_NAMES[flash_level], flash_from])
+	# The palette hold (FSession::SetPaletteHold): on unless palhold=0 (for comparisons; no key, not kept).
+	core.set_palette_hold(args.get("palhold", "1") != "0")
+	print("xeno: palette hold %s" % ("on" if core.palette_hold() else "off (palhold=0)"))
 	# The screen wave's layer: over the 3D picture, under the 2D layer (the wave takes the scene alone, FieldSceneRendering.cpp).
 	var wave_layer := CanvasLayer.new()
 	wave_layer.layer = 0
@@ -1701,8 +1707,8 @@ func _frame_report() -> void:
 	# The disc in the drive (the second once the story or a save of it took it) and one the game waits on, if any.
 	lines.append("drive: disc %d (%s, %s)%s" % [int(before.get("drive_disc", 0)), before.get("drive_disc_id", ""), String(before.get("drive_disc_file", "")).replace("/", "\\"),
 		"; waiting on disc %d, not found in %s" % [int(before.get("disc_wanted", 0)), before.get("disc_wanted_folder", "")] if int(before.get("disc_wanted", 0)) > 0 else ""])
-	lines.append("settings: hd %s (pack %s, %d pictures, by content %s), light %s, dark places brightened %d (%s, F7), battle flashes %d (%s, F8), turbo %d (Tab adds x%d), hd_sync %s" % [hd, pack_path, core.pack_pictures(), alias_found if alias_on else "off", lit,
-		dark_level, DARK_NAMES[dark_level], flash_level, FLASH_NAMES[flash_level], turbo_rate, TURBO_KEY_RATE, hd_sync])
+	lines.append("settings: hd %s (pack %s, %d pictures, by content %s), light %s, dark places brightened %d (%s, F7), battle flashes %d (%s, F8), turbo %d (Tab adds x%d), hd_sync %s, palette hold %s" % [hd, pack_path, core.pack_pictures(), alias_found if alias_on else "off", lit,
+		dark_level, DARK_NAMES[dark_level], flash_level, FLASH_NAMES[flash_level], turbo_rate, TURBO_KEY_RATE, hd_sync, "on" if core.palette_hold() else "off (palhold=0)"])
 	lines.append("shot.png: the window as shown, %d x %d; pictures still loading %d, primitives drawn from VRAM while their picture loads %d (info.waiting)" % [shot.get_width(), shot.get_height(), still_loading, int(before.get("waiting", 0))])
 	lines.append("shot_plain.png: %s" % ("the same frame with the pack, the light and the brightening of dark places off (F3, F2, F7), set back after" if hd_was or lit_was or dark_was > 0 else "the pack and the light were off already: the same picture"))
 	if source.is_empty():

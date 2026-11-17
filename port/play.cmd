@@ -30,6 +30,10 @@ rem   play.cmd lang=en             the English text (USA disc 1); the window tit
 rem   play.cmd encounters=0        random battles off from the start (also on the F1 panel)
 rem   play.cmd turbo=4             the game always at 4 times its pace (turbo=2: twice)
 rem   play.cmd flash=0             the battle flashes off from the start (as F8; 1 weak, 2 as in the game)
+rem   play.cmd palhold=0           the palette hold off, for comparisons (on by default: a model's texture whose palette
+rem                                changed by at most 2 of 31 in the colours its texels use keeps the HD picture chosen
+rem                                before - the world map's land no longer flickers; characters are never held;
+rem                                see docs\HOW_IT_WORKS.md, "Palette hold")
 rem   play.cmd lang=auto           the discs in weltall\Games found by their content (the translation's disc 1 first)
 rem Paths: root=<folder> (default this folder) with games=, pack=, alias_index=, movies= (out\movies: HD replacements of
 rem the game's movies, <disc>\<NN>.ogv), saves=, states= under it. The mod folder for another PC: python tools\make_dist.py

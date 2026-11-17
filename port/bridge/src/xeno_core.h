@@ -122,6 +122,9 @@ namespace godot
 		/** The battle effects' flashes (FSession::SetBattleFlashes): 2 as the game draws them, 1 weak, 0 off. */
 		void set_battle_flashes(int level);
 		int battle_flashes() const;
+		/** The palette hold (FSession::SetPaletteHold): on by default. */
+		void set_palette_hold(bool on);
+		bool palette_hold() const;
 
 		/** The console powered on as a player starts it: the kernel's notice, the opening movie, the title. */
 		String power_on();

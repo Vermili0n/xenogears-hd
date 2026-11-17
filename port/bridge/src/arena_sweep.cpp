@@ -21,7 +21,8 @@
 
 namespace
 {
-	constexpr int BuildEvery = 30;
+	/** The builds: every 30th frame and the last (XENO_BUILD_EVERY=<n>: every n-th instead, for the palette counts' finer steps). */
+	const int BuildEvery = std::getenv("XENO_BUILD_EVERY") != nullptr && std::atoi(std::getenv("XENO_BUILD_EVERY")) > 0 ? std::atoi(std::getenv("XENO_BUILD_EVERY")) : 30;
 	/** The forest map Weltall's arena audit asks from: its scripts ask for nothing as the arena is asked for. */
 	constexpr int ForestMap = 15;
 	constexpr int FeiGear = 0;
