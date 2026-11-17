@@ -298,6 +298,15 @@ namespace Xeno
 		uint32_t HudHash = 0;
 		/** In battle: the links of the frame's drawing order in the scene (before the fade and the HUD) and after them. */
 		int SceneLinks = 0, OverLinks = 0;
+		/**
+		 * In battle: the fade layer the frame links (FBattleShowFade; 0 none, else 1): its blend mode (0 half, 1 add, 2
+		 * subtract, 3 add a quarter), its colour, whether an effect's script started it (an attack's or an Ether's flash when
+		 * it adds), and the share of its colour drawn (SetBattleFlashes: below 1 only for an effect's adding fade).
+		 */
+		int FadeLinked = 0, FadeMode = -1;
+		std::array<int, 3> FadeColour{};
+		bool bFadeFromEffect = false;
+		float FlashShare = 1.0f;
 		/** The loop's stage (FGameLoop: 0 boot, 1 a program, 2 soft reset, 3 stopped) and what the display shows. */
 		int Stage = -1;
 		EScreenKind Screen = EScreenKind::Blank;
@@ -739,6 +748,13 @@ namespace Xeno
 		 * would (a battle fought, the field or the world map ticking), through VblanksDue and the session's pace.
 		 */
 		void SetTurbo(int Rate);
+		/**
+		 * The battle effects' flashes (their adding full-screen fades, FBattleShowFade::bFromEffect, as Weltall's own
+		 * setting EBattleFlashes picks them, DrawnFadeShare): 2 as the game draws them (the default), 1 weak (a share of
+		 * their colour, WeakFlashShare), 0 off. Every other fade (the battle's start, escape, events; any darkening) stays.
+		 */
+		void SetBattleFlashes(int Level);
+		int BattleFlashes() const;
 		/** The pace the game runs at now: the turbo where it applies, else 1. */
 		int GamePace() const;
 		/** How many programs have started (a new one: a battle, a map, the world map). */

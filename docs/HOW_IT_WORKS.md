@@ -47,7 +47,7 @@ core's PCM into an `AudioStreamGenerator` with about four vblanks of buffer. The
 pages and CLUTs are decoded in the shader (`game/shaders/vram.gdshaderinc`).
 
 Keys: F2 light, F3 HD pack, F5 save state, F9 load newest state, F6 frame report, F7 brighten dark places,
-F1 cheat panel, Tab fast-forward, F11 full screen. Every command-line argument is listed at the top of `main.gd`.
+F8 battle flashes (as in the game / weak / off), F1 cheat panel, Tab fast-forward, F11 full screen. Every command-line argument is listed at the top of `main.gd`.
 
 ## How an HD picture is found
 
@@ -119,6 +119,11 @@ in the game.
 
 - **Battle panel black block** (one warehouse battle): the black quads are flat polygons of the battle scene itself
   in the core's data, drawn in their PS1 order; not compared with an emulator by eye, not changed.
+- **Battle flashes** (F8, `flash=2|1|0`): the full-screen flash of a blow or a Deathblow is the battle frame's fade layer,
+  one untextured tile over the screen that adds its colour, started by the effect's script. The bridge draws such a
+  layer with all of its colour, a third or none (Weltall's own rule for its battle flashes setting, `DrawnFadeShare`);
+  the battle's own fades and every darkening stay. Measured: with `flash=2` the picture equals the build before it
+  pixel for pixel; the rule acts in battle only.
 - **Dark scenes**: the port's unlit frame matches the core's picture; the game itself is that dark. F7 adds an
   optional brightening curve (off / weak / stronger). Night scenes with the added sun light still cast sun shadows.
 - **Two reported scenes were not reproduced** from the nearest saves: partly low-resolution Bart in a red-lit cockpit

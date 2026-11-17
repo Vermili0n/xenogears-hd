@@ -119,6 +119,9 @@ namespace godot
 		/** The pace the game runs at now (the turbo where Weltall's fast-forward would run, else 1), and the programs started so far. */
 		int game_pace() const;
 		int program_runs() const;
+		/** The battle effects' flashes (FSession::SetBattleFlashes): 2 as the game draws them, 1 weak, 0 off. */
+		void set_battle_flashes(int level);
+		int battle_flashes() const;
 
 		/** The console powered on as a player starts it: the kernel's notice, the opening movie, the title. */
 		String power_on();

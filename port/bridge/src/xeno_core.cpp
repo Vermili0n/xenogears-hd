@@ -572,6 +572,16 @@ namespace godot
 		return Session.ProgramRuns();
 	}
 
+	void XenoCore::set_battle_flashes(int level)
+	{
+		Session.SetBattleFlashes(level);
+	}
+
+	int XenoCore::battle_flashes() const
+	{
+		return Session.BattleFlashes();
+	}
+
 	int XenoCore::sound_rate() const
 	{
 		return Xeno::FSession::SoundRate();
@@ -664,6 +674,14 @@ namespace godot
 		Out["hud_hash"] = static_cast<int64_t>(Info.HudHash);
 		Out["scene_links"] = Info.SceneLinks;
 		Out["over_links"] = Info.OverLinks;
+		// The fade layer the battle frame links: [linked 0/1, mode, red, green, blue, an effect's 0/1], and the share of its colour drawn (SetBattleFlashes).
+		PackedInt32Array Fade;
+		for (const int Value : {Info.FadeLinked, Info.FadeMode, Info.FadeColour[0], Info.FadeColour[1], Info.FadeColour[2], Info.bFadeFromEffect ? 1 : 0})
+		{
+			Fade.append(Value);
+		}
+		Out["battle_fade"] = Fade;
+		Out["battle_flash_share"] = Info.FlashShare;
 		// The screens beside the field and the battle: the loop's stage, what shows (xeno_session.h EScreenKind), the menu,
 		// the movie, the field's picture of the screen, a chapter's card, the 2D layer built last.
 		Out["stage"] = Info.Stage;
@@ -1038,5 +1056,7 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("ask_field_movie", "number", "end_frame"), &XenoCore::ask_field_movie);
 		ClassDB::bind_method(D_METHOD("game_pace"), &XenoCore::game_pace);
 		ClassDB::bind_method(D_METHOD("program_runs"), &XenoCore::program_runs);
+		ClassDB::bind_method(D_METHOD("set_battle_flashes", "level"), &XenoCore::set_battle_flashes);
+		ClassDB::bind_method(D_METHOD("battle_flashes"), &XenoCore::battle_flashes);
 	}
 }

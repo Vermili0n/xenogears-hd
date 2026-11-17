@@ -6,6 +6,7 @@ rem Keyboard: arrows = directions, X = Cross, Z = Circle, A = Square, S = Triang
 rem           Enter = Start, Backspace = Select, Q/W = L1/R1, E/R = L2/R2.
 rem Gamepad:  A/B/X/Y = Cross/Circle/Square/Triangle, d-pad or left stick, LB/RB = L1/R1, Start/Back.
 rem F2 = light on/off, F3 = HD pack on/off, F7 = dark places brighter (off / weak / stronger, remembered), F11 = full screen.
+rem F8 = battle flashes (the whole screen lit up as a blow lands): as in the game / weak / off, remembered; flash=2|1|0.
 rem F5 = save a state (out\states), F9 = load the newest state. The game's own File saves go to out\saves\game.
 rem F6 = a report of the frame shown, at any moment (cutscenes too): a folder in out\frame_reports with the shot,
 rem       the shot without the pack and the light, frame.txt (what is drawn not from the pack, every primitive),
@@ -28,6 +29,7 @@ rem   play.cmd boot=1              the console switched on: publisher's notice, 
 rem   play.cmd lang=en             the English text (USA disc 1); the window title shows which (RU / EN)
 rem   play.cmd encounters=0        random battles off from the start (also on the F1 panel)
 rem   play.cmd turbo=4             the game always at 4 times its pace (turbo=2: twice)
+rem   play.cmd flash=0             the battle flashes off from the start (as F8; 1 weak, 2 as in the game)
 rem   play.cmd lang=auto           the discs in weltall\Games found by their content (the translation's disc 1 first)
 rem Paths: root=<folder> (default this folder) with games=, pack=, alias_index=, movies= (out\movies: HD replacements of
 rem the game's movies, <disc>\<NN>.ogv), saves=, states= under it. The mod folder for another PC: python tools\make_dist.py

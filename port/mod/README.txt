@@ -43,6 +43,8 @@ Tab — hold: the game runs 4 times faster (battles, walking; movies and menus s
 F4  — win the current battle.
 F2  — light and shadows on/off;  F3 — HD textures on/off;  F11 — full screen / window.
 F7  — dark places brighter: off / weak / stronger ("weak" by default, the choice is remembered).
+F8  — battle flashes (the whole screen lights up as a blow or a Deathblow lands): as in the game / weak / off
+      ("as in the game" by default, the choice is remembered).
 F5  — quick save (where you control the hero);  F9 — load the last quick save.
 F6  — a "frame report": if you see something wrong in the picture (at any moment, in a cutscene too), press F6 —
       a folder named by date and time appears in the reports folder: the screenshot, the data of that frame and

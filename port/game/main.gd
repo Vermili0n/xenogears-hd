@@ -15,6 +15,9 @@ extends Node3D
 ##   of rus= and then in games=, the USA's in games=; while it is missing a line over the game says where, _follow_disc)
 ##   sun=<energy> ambient=<energy>  dark=0|1|2 (F7's brightening of dark places: off, weak, stronger; else the player's
 ##   last choice, weak at first; scripted runs: weak unless given)
+##   flash=2|1|0 (F8: the battle effects' full-screen flashes as in the game, weak, off; else the player's last choice, as
+##   in the game at first; scripted runs: as in the game unless given)  flashlog=1 (for checks: a line whenever a battle
+##   frame's fade layer changes)
 ##   ff=<frames> script=<frames:buttons,...> shot=<png> log=1  sound=0  quit_after=<seconds>  states=<folder>  notes=1
 ##   saves=<folder> (the game's own saves elsewhere than out/saves/game, for checks)
 ##   at=<seconds>:save|load|hold=<buttons>|snap,... (live play, for checks: F5 or F9 pressed, buttons held from then on,
@@ -280,6 +283,21 @@ const DARK_NAMES := ["выкл", "слабо", "сильнее"]
 const SETTINGS_FILE := "user://settings.cfg"
 var dark_level := 1
 var dark_layer: CanvasLayer
+## F8, the battle effects' flashes: the whole screen brightened for a few frames as an attack or an Ether lands. Measured
+## (out/flash): the battle frame's fade layer, an untextured tile over the whole screen adding a colour (white or near it,
+## mode 1 add or 3 add a quarter), started by an effect's script (FBattleShowFade::bFromEffect). The bridge draws its colour
+## whole, at a share or not at all (FSession::SetBattleFlashes: the rule Weltall's own setting EBattleFlashes uses);
+## every other fade (the battle's start, an escape, an event, any darkening, fades outside battle) stays as the game draws
+## it. Levels: 2 as in the game (the default), 1 weak, 0 off; kept in user://settings.cfg when F8 is pressed, flash= on the
+## command line overrides it; runs with a script, a shot or quit_after take flash= or 2, never the player's saved choice.
+const FLASH_NAMES := ["выкл", "слабо", "как в игре"]
+var flash_level := 2
+var flash_log := false
+var last_fade := PackedInt32Array()
+## buttonlog=<file> (for checks): each scripted game frame's buttons, written at the end as a script
+## (_script_of) - the same frames replayed by any build of the shell, with @snap where wanted.
+var button_log := ""
+var buttons_run := PackedInt32Array()
 var pack_path := PACK
 var pack_read := false
 var shaders := {}
@@ -574,6 +592,20 @@ func _ready() -> void:
 	dark_layer.add_child(dark_rect)
 	add_child(dark_layer)
 	_apply_dark()
+	# F8's battle flashes (the bridge draws them, FSession::SetBattleFlashes).
+	var flash_from := "default"
+	if args.has("flash"):
+		flash_level = clampi(int(args["flash"]), 0, FLASH_NAMES.size() - 1)
+		flash_from = "flash="
+	elif not unattended:
+		var kept := ConfigFile.new()
+		if kept.load(SETTINGS_FILE) == OK:
+			flash_level = clampi(int(kept.get_value("display", "flash", flash_level)), 0, FLASH_NAMES.size() - 1)
+			flash_from = SETTINGS_FILE
+	core.set_battle_flashes(flash_level)
+	flash_log = args.get("flashlog", "0") == "1"
+	button_log = _from_root(args["buttonlog"]) if args.has("buttonlog") else ""
+	print("xeno: battle flashes %d (%s, from %s)" % [flash_level, FLASH_NAMES[flash_level], flash_from])
 	# The screen wave's layer: over the 3D picture, under the 2D layer (the wave takes the scene alone, FieldSceneRendering.cpp).
 	var wave_layer := CanvasLayer.new()
 	wave_layer.layer = 0
@@ -761,6 +793,9 @@ func _process(delta: float) -> void:
 		elif action == "dark":
 			# F7 pressed (for checks: the level kept for the next start).
 			_next_dark()
+		elif action == "flash":
+			# F8 pressed (for checks: the level kept for the next start).
+			_next_flash()
 		elif action.begins_with("hold="):
 			# Buttons held from now on as a player holds them (for checks of live play: a run, a walk); hold=none lets go.
 			live_hold = _buttons_of(action.substr(5))
@@ -884,6 +919,11 @@ func _play_script() -> void:
 					# F7's level for the shots after it (not kept): @dark=0|1|2.
 					dark_level = clampi(int(action.substr(5)), 0, DARK_STRENGTHS.size() - 1)
 					_apply_dark()
+				elif action.begins_with("flash="):
+					# F8's level for the frames after it (not kept): @flash=0|1|2.
+					flash_level = clampi(int(action.substr(6)), 0, FLASH_NAMES.size() - 1)
+					core.set_battle_flashes(flash_level)
+					_show_title()
 				elif action == "panel" or action.begins_with("panel="):
 					# The cheat panel shown or hidden (for shots), on a tab: @panel=<0-2>.
 					_toggle_cheat_panel(int(action.substr(6)) if action.begins_with("panel=") else -1)
@@ -907,6 +947,8 @@ func _play_script() -> void:
 func _step(buttons: int) -> void:
 	var error := core.step(buttons, 128, 128, false)
 	frames_run += 1
+	if not button_log.is_empty():
+		buttons_run.append(buttons)
 	if not error.is_empty():
 		push_error("xeno: frame %d: %s" % [frames_run, error])
 		set_process(false)
@@ -916,10 +958,23 @@ func _step(buttons: int) -> void:
 			sound_playback = null
 	elif log_frames:
 		print("xeno: ", frames_run, " ", core.info())
+	if flash_log:
+		# flashlog=1 (for checks): the battle frame's fade layer [linked, mode, r, g, b, an effect's], a line when it changes.
+		var info: Dictionary = core.info()
+		var fade: PackedInt32Array = info.get("battle_fade", PackedInt32Array())
+		if fade != last_fade:
+			print("xeno: fade %d %s share %s program %d" % [frames_run, fade, info.get("battle_flash_share", 1.0), int(info.get("program", -1))])
+			last_fade = fade
 
 
 func _save_shot_and_quit() -> void:
 	set_process(false)
+	if not button_log.is_empty():
+		var written := FileAccess.open(button_log, FileAccess.WRITE)
+		if written != null:
+			written.store_string(_script_of(buttons_run))
+			written.close()
+		print("xeno: buttonlog %s, %d frames" % [button_log, buttons_run.size()])
 	# The shot shows the pack's pictures as the game would once they have loaded: the game waits (no frame steps) while
 	# the frame is built again until no picture it asks for is still loading. shot_now=1 takes it at once instead.
 	var waited := 0
@@ -1443,6 +1498,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_frame_report()
 		KEY_F7:
 			_next_dark()
+		KEY_F8:
+			_next_flash()
 		KEY_F9:
 			_load_latest_state()
 		KEY_F11:
@@ -1644,8 +1701,8 @@ func _frame_report() -> void:
 	# The disc in the drive (the second once the story or a save of it took it) and one the game waits on, if any.
 	lines.append("drive: disc %d (%s, %s)%s" % [int(before.get("drive_disc", 0)), before.get("drive_disc_id", ""), String(before.get("drive_disc_file", "")).replace("/", "\\"),
 		"; waiting on disc %d, not found in %s" % [int(before.get("disc_wanted", 0)), before.get("disc_wanted_folder", "")] if int(before.get("disc_wanted", 0)) > 0 else ""])
-	lines.append("settings: hd %s (pack %s, %d pictures, by content %s), light %s, dark places brightened %d (%s, F7), turbo %d (Tab adds x%d), hd_sync %s" % [hd, pack_path, core.pack_pictures(), alias_found if alias_on else "off", lit,
-		dark_level, DARK_NAMES[dark_level], turbo_rate, TURBO_KEY_RATE, hd_sync])
+	lines.append("settings: hd %s (pack %s, %d pictures, by content %s), light %s, dark places brightened %d (%s, F7), battle flashes %d (%s, F8), turbo %d (Tab adds x%d), hd_sync %s" % [hd, pack_path, core.pack_pictures(), alias_found if alias_on else "off", lit,
+		dark_level, DARK_NAMES[dark_level], flash_level, FLASH_NAMES[flash_level], turbo_rate, TURBO_KEY_RATE, hd_sync])
 	lines.append("shot.png: the window as shown, %d x %d; pictures still loading %d, primitives drawn from VRAM while their picture loads %d (info.waiting)" % [shot.get_width(), shot.get_height(), still_loading, int(before.get("waiting", 0))])
 	lines.append("shot_plain.png: %s" % ("the same frame with the pack, the light and the brightening of dark places off (F3, F2, F7), set back after" if hd_was or lit_was or dark_was > 0 else "the pack and the light were off already: the same picture"))
 	if source.is_empty():
@@ -1831,8 +1888,8 @@ func _apply_options() -> void:
 
 
 func _show_title() -> void:
-	DisplayServer.window_set_title("Xenogears (Godot)   текст: %s   F2 свет: %s   F3 HD: %s   F7 тёмное: %s   F11 экран" % [core.language().to_upper(), "вкл" if lit else "выкл",
-		"вкл" if hd else "выкл", DARK_NAMES[dark_level]])
+	DisplayServer.window_set_title("Xenogears (Godot)   текст: %s   F2 свет: %s   F3 HD: %s   F7 тёмное: %s   F8 вспышки: %s   F11 экран" % [core.language().to_upper(),
+		"вкл" if lit else "выкл", "вкл" if hd else "выкл", DARK_NAMES[dark_level], FLASH_NAMES[flash_level]])
 
 
 ## F7's level onto its layer (off: the layer hidden, no screen copy made).
@@ -1854,6 +1911,18 @@ func _next_dark() -> void:
 	settings.set_value("display", "dark", dark_level)
 	var error := settings.save(SETTINGS_FILE)
 	_show_note("Тёмные места светлее (F7): " + DARK_NAMES[dark_level] + ("" if error == OK else " (не запомнено: ошибка %d)" % error))
+
+
+## F8: the battle flashes' next level (as in the game -> weak -> off -> as in the game), kept for the next start.
+func _next_flash() -> void:
+	flash_level = (flash_level + FLASH_NAMES.size() - 1) % FLASH_NAMES.size()
+	core.set_battle_flashes(flash_level)
+	_show_title()
+	var settings := ConfigFile.new()
+	settings.load(SETTINGS_FILE)
+	settings.set_value("display", "flash", flash_level)
+	var error := settings.save(SETTINGS_FILE)
+	_show_note("Вспышки в бою (F8): " + FLASH_NAMES[flash_level] + ("" if error == OK else " (не запомнено: ошибка %d)" % error))
 
 
 ## The brightening of dark places over what is drawn under it (the screen's copy): the brightest channel y lifted to

@@ -113,6 +113,47 @@ namespace Xeno
 		/** The texels wrap in a texture window (C2: the window's offset, then the bits of a texel coordinate it replaces). */
 		constexpr float FlagWindow = 8.0f;
 
+		/**
+		 * XENO_FLASH_COUNT=1 (for checks): what draws a colour over the whole screen, counted over the process and printed on
+		 * stderr as it ends. Per game frame in battle: the fade layer the frame links, by who started it (an effect's script
+		 * or the battle itself), its blend mode and whether its colour is black, and the frames the flashes' rule
+		 * (FImpl::FlashShareOf) takes a share of; per 2D layer built for a game frame not built before, outside battle and in
+		 * it: each untextured semi-transparent primitive over at least 95 % of its screen, by what runs and blend mode.
+		 */
+		struct FFlashCount
+		{
+			bool bOn = std::getenv("XENO_FLASH_COUNT") != nullptr;
+			long long Frames = 0, BattleFrames = 0, FadeFrames = 0, RuleFrames = 0, RuleFramesBlack = 0, LayerBuilds = 0;
+			/** [an effect's * 4 + mode][black]. */
+			std::array<std::array<long long, 2>, 8> Fades{};
+			/** "<what runs> mode <m>" -> primitives. */
+			std::map<std::string, long long> Layers;
+
+			~FFlashCount()
+			{
+				if (!bOn)
+				{
+					return;
+				}
+				std::fprintf(stderr, "flash count: game frames %lld, battle frames %lld, with the fade layer %lld; the flashes' rule %lld (colour not black) + %lld (black)\n",
+					Frames, BattleFrames, FadeFrames, RuleFrames, RuleFramesBlack);
+				for (std::size_t Kind = 0; Kind < Fades.size(); ++Kind)
+				{
+					if (Fades[Kind][0] + Fades[Kind][1] > 0)
+					{
+						std::fprintf(stderr, "flash count: battle fade %s mode %zu: %lld frames coloured, %lld black\n", Kind >= 4 ? "effect" : "battle", Kind & 3, Fades[Kind][0],
+							Fades[Kind][1]);
+					}
+				}
+				std::fprintf(stderr, "flash count: 2D layers built for a new game frame %lld\n", LayerBuilds);
+				for (const auto& [What, Count] : Layers)
+				{
+					std::fprintf(stderr, "flash count: full-screen untextured semi-transparent 2D, %s: %lld\n", What.c_str(), Count);
+				}
+			}
+		};
+		FFlashCount FlashCount;
+
 		/** A corner as the shaders take it. */
 		struct FCorner
 		{
@@ -576,6 +617,11 @@ namespace Xeno
 		/** The cheats' turbo (SetTurbo, 1 none) and random battles off (the game's setting, kept over every power-on). */
 		int Turbo = 1;
 		bool bEncountersOff = false;
+		/** The battle effects' flashes (SetBattleFlashes): 2 as the game draws them, 1 weak, 0 off. */
+		int BattleFlashes = 2;
+		/** XENO_FLASH_COUNT: game frames run (AfterFrame), the last one whose 2D layer was counted, and whether this build counts. */
+		long long FramesAfter = 0, LayerCountedAt = -1;
+		bool bCountLayer = false;
 		/**
 		 * The game's other disc, taken where the session asked for it (FDiscDrive): its image, boot program and file
 		 * index, kept for every session powered on after (a state loaded, a restart); before the session and the loop,
@@ -2775,6 +2821,11 @@ namespace Xeno
 				// A texture in the port's second VRAM state is drawn from VRAM (not passed on yet): textured, never from the pack.
 				// The sweep's tallies are of the game's own 2D layer (not of a card the display draws over it).
 				ScreenTextured += Primitive.Texture && bTallied ? 1 : 0;
+				if (!Primitive.Texture && bSemi)
+				{
+					CountFullScreen(static_cast<int>(Primitive.UntexturedBlend) & 3, Corners, Primitive.CornerCount, static_cast<float>(Layer.Width),
+						static_cast<float>(Layer.Height));
+				}
 				Into.Area = Look.Area;
 				DumpPath = Primitive.Texture ? "vram (second state)" : "untextured";
 				if (Report != nullptr)
@@ -3621,19 +3672,57 @@ namespace Xeno
 			}
 		}
 
+		/**
+		 * The share of the battle fade's colour drawn. An effect's adding fade - an attack's or an Ether's flash, the whole
+		 * screen brightened for a few frames (FBattleShowFade::bFromEffect: its script's command CAh started it, mode 1 add
+		 * or 3 add a quarter) - all of it, WeakFlashShare or none, as the player has them (BattleFlashes 2 / 1 / 0); every
+		 * other fade (the battle's start from black, an escape, the result, an event's, any subtracting or halving one) all
+		 * of it. Which fades: Weltall's own rule for its setting EBattleFlashes (DrawnFadeShare, BattleFrameDraw.cpp).
+		 */
+		static float FlashShareOf(const FBattleShowFade& Fade, int Level)
+		{
+			const float Share = DrawnFadeShare(Fade, Level <= 0 ? EBattleFlashes::Off : Level == 1 ? EBattleFlashes::Softer : EBattleFlashes::Original);
+			return Share > 0.0f && Share < 1.0f ? WeakFlashShare : Share;
+		}
+		/**
+		 * The weak flashes' share of the colour: a third, picked by eye against a half and a quarter (Weltall's "Softer") on
+		 * frames of a hit, a Deathblow and a gear battle (out/flash): at a quarter a hit's flash barely shows on a bright
+		 * field, at a half a dark scene still goes grey.
+		 */
+		static constexpr float WeakFlashShare = 1.0f / 3.0f;
+
 		/** The fade layer: a tile from (-32, -32) to (320, 240), semi-transparent in its mode, over the whole display (BuildBattleFade). */
 		void PushBattleFade(FCollector& Into, const FBattleShowFrame& Frame)
 		{
 			FLook Look;
 			Look.Flags = FlagSemi;
 			Look.Spans = 1.0f;
+			// An effect's flash as the player has them (FlashShareOf; as made: the colour as it is).
+			const float Share = FlashShareOf(Frame.Fade, BattleFlashes);
+			std::array<uint8_t, 3> Colour{Frame.Fade.Color[0], Frame.Fade.Color[1], Frame.Fade.Color[2]};
+			if (Share != 1.0f)
+			{
+				for (uint8_t& Channel : Colour)
+				{
+					Channel = static_cast<uint8_t>(std::lround(static_cast<float>(Channel) * Share));
+				}
+			}
 			std::array<FCorner, 4> Corners{};
 			for (std::size_t Corner = 0; Corner < 4; ++Corner)
 			{
 				Corners[Corner].Pos = {(Corner & 1) != 0 ? 320.0f : -32.0f, (Corner & 2) != 0 ? 240.0f : -32.0f, 0.0f};
-				Corners[Corner].Color = {Frame.Fade.Color[0], Frame.Fade.Color[1], Frame.Fade.Color[2]};
+				Corners[Corner].Color = Colour;
+			}
+			if (Report != nullptr)
+			{
+				Report->Who = "battle fade layer";
 			}
 			PushPrimitive(Into.Get(BlendOf(static_cast<EBlendMode>(Frame.Fade.Mode & 3)), {}), Corners, 4, Look);
+			if (Dumping2D())
+			{
+				Dump("fade mode %d colour %02x%02x%02x effect %d share %g drawn %02x%02x%02x untextured corners (-32,-32)-(320,240)\n", static_cast<int>(Frame.Fade.Mode),
+					Frame.Fade.Color[0], Frame.Fade.Color[1], Frame.Fade.Color[2], Frame.Fade.bFromEffect ? 1 : 0, Share, Colour[0], Colour[1], Colour[2]);
+			}
 		}
 
 		/** The HUD's primitives as a 2D list, as the game draws them (BattleView.cpp: FMenuDrawBuilder, without the player's button pictures). */
@@ -4183,6 +4272,31 @@ namespace Xeno
 		 * A grey drawn over the whole display, the GPU subtracting it from what lies below (Blend 2) or adding it (1): one of
 		 * the program's own fades over its picture (FWorldMapFadeFrame), across the picture's rows.
 		 */
+		/** XENO_FLASH_COUNT: an untextured semi-transparent 2D primitive over at least 95 % of its screen, counted (FFlashCount). */
+		void CountFullScreen(int Mode, const std::array<FCorner, 4>& Corners, std::size_t Count, float Width, float Height)
+		{
+			if (!bCountLayer)
+			{
+				return;
+			}
+			float Left = 1e9f, Top = 1e9f, Right = -1e9f, Bottom = -1e9f;
+			for (std::size_t Corner = 0; Corner < Count; ++Corner)
+			{
+				Left = std::min(Left, Corners[Corner].Pos[0]);
+				Right = std::max(Right, Corners[Corner].Pos[0]);
+				Top = std::min(Top, Corners[Corner].Pos[1]);
+				Bottom = std::max(Bottom, Corners[Corner].Pos[1]);
+			}
+			const float Covered = std::max(0.0f, std::min(Right, Width) - std::max(Left, 0.0f)) * std::max(0.0f, std::min(Bottom, Height) - std::max(Top, 0.0f));
+			if (Covered < 0.95f * Width * Height)
+			{
+				return;
+			}
+			const char* What = RunningMenu() != nullptr ? "menu" : Battle() != nullptr ? "battle" : Battling() != nullptr ? "arena" : WorldMap() != nullptr ? "world map"
+				: Field() != nullptr ? "field" : "other";
+			++FlashCount.Layers[std::string(What) + " mode " + std::to_string(Mode)];
+		}
+
 		void PushMapDarkening(FCollector& Into, int32 Level, int32 Blend)
 		{
 			const uint8 Clamped = static_cast<uint8>(std::clamp(Level, 0, 255));
@@ -4197,6 +4311,7 @@ namespace Xeno
 			}
 			Mix(static_cast<uint32>(Clamped) | static_cast<uint32>(Blend) << 8);
 			++ScreenPrimitives;
+			CountFullScreen(Blend & 3, Corners, 4, static_cast<float>(WorldMapScreen.Width), static_cast<float>(WorldMapScreen.Height));
 			PushPrimitive(Into.Get(BlendOf(static_cast<EBlendMode>(Blend & 3)), {}), Corners, 4, Look);
 		}
 
@@ -6327,6 +6442,25 @@ namespace Xeno
 	void FSession::FImpl::AfterFrame()
 	{
 		FImpl& I = *this;
+		++I.FramesAfter;
+		if (FlashCount.bOn)
+		{
+			++FlashCount.Frames;
+			if (const FBattleShowFrame* Frame = I.BattleFrame())
+			{
+				++FlashCount.BattleFrames;
+				if (std::any_of(Frame->Order.begin(), Frame->Order.end(), [](const FBattleShowLink& Link) { return Link.Kind == EBattleShowLink::Fade; }))
+				{
+					const bool bBlack = Frame->Fade.Color[0] == 0 && Frame->Fade.Color[1] == 0 && Frame->Fade.Color[2] == 0;
+					++FlashCount.FadeFrames;
+					++FlashCount.Fades[(Frame->Fade.bFromEffect ? 4u : 0u) + (Frame->Fade.Mode & 3u)][bBlack ? 1 : 0];
+					if (FlashShareOf(Frame->Fade, 0) < 1.0f)
+					{
+						++(bBlack ? FlashCount.RuleFramesBlack : FlashCount.RuleFrames);
+					}
+				}
+			}
+		}
 		// A battle's transition breaks the picture of the screen before it (BattleView.cpp, Follow: taken as the program starts).
 		I.BattleScreenBefore = I.Loop->Battle() != nullptr ? FImpl::BattlePictureKey(I.Loop->ProgramRuns()) : 0;
 		if (FWorldMapProgram* Map = I.Loop->WorldMap())
@@ -6854,6 +6988,14 @@ namespace Xeno
 				const std::size_t Layer = FImpl::FirstLayer(*Frame);
 				Info.SceneLinks = static_cast<int>(Layer);
 				Info.OverLinks = static_cast<int>(Frame->Order.size() - Layer);
+				if (std::any_of(Frame->Order.begin(), Frame->Order.end(), [](const FBattleShowLink& Link) { return Link.Kind == EBattleShowLink::Fade; }))
+				{
+					Info.FadeLinked = 1;
+					Info.FadeMode = Frame->Fade.Mode;
+					Info.FadeColour = {Frame->Fade.Color[0], Frame->Fade.Color[1], Frame->Fade.Color[2]};
+					Info.bFadeFromEffect = Frame->Fade.bFromEffect;
+					Info.FlashShare = FImpl::FlashShareOf(Frame->Fade, I.BattleFlashes);
+				}
 				Info.HudPrimitives = static_cast<int>(Frame->Hud.Primitives.size());
 				// FNV-1a over what the HUD draws and where: a window opened, a cursor moved, a gauge filled.
 				uint32 Hash = 2166136261u;
@@ -7333,6 +7475,7 @@ namespace Xeno
 	void FSession::BuildWorld(std::vector<FSurface>& Out)
 	{
 		FImpl& I = *Impl;
+		I.bCountLayer = false;
 		// For checks (Unhandled): the triangles of the scene that blend, however BuildWorld returns.
 		struct FBlendedCount
 		{
@@ -7660,6 +7803,13 @@ namespace Xeno
 	{
 		FImpl& I = *Impl;
 		FCollector Into(Out, true);
+		// XENO_FLASH_COUNT: each game frame's 2D layer counted once (a frame built again, for its pictures or a report, is not).
+		I.bCountLayer = FlashCount.bOn && I.FramesAfter != I.LayerCountedAt;
+		if (I.bCountLayer)
+		{
+			I.LayerCountedAt = I.FramesAfter;
+			++FlashCount.LayerBuilds;
+		}
 		I.ScreenTextured = I.ScreenHd = I.ScreenNoUpload = I.ScreenAllInPack = 0;
 		I.ScreenWaiting = 0;
 		I.ScreenBeyond = 0;
@@ -8592,5 +8742,15 @@ namespace Xeno
 	int FSession::ProgramRuns() const
 	{
 		return Impl->Loop ? Impl->Loop->ProgramRuns() : 0;
+	}
+
+	void FSession::SetBattleFlashes(int Level)
+	{
+		Impl->BattleFlashes = std::clamp(Level, 0, 2);
+	}
+
+	int FSession::BattleFlashes() const
+	{
+		return Impl->BattleFlashes;
 	}
 }
