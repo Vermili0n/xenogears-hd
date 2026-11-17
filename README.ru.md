@@ -8,11 +8,20 @@ English: [README.md](README.md)
 
 ![Xenogears HD: сцена в игре](docs/img/screenshot_bridge.png)
 
+## Скачать
+
+- **Сборка** `XenogearsHD_portable_nopack.zip` (90 МБ): страница [Releases](../../releases).
+- **HD-пак** `XenogearsHD_pack.zip` (9,8 ГБ): [Google Диск](https://drive.google.com/file/d/1YDdp8Z_BPnRCgyAuMYRyH30flTckT9Gc/view?usp=sharing). Для GitHub он слишком велик, поэтому на странице Releases его нет.
+
+Что с ними делать: [Как запустить](#как-запустить).
+
 ## Видео
 
 [![Xenogears HD: все смертельные приёмы Фея, Ситана и Эмеральды](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas)
 
 [Все 34 смертельных приёма Фея, Ситана и Эмеральды](https://www.youtube.com/watch?v=cxWjZwgbCas), запись прямо из игры (7 минут).
+
+[Прогулка по Кислеву](https://www.youtube.com/watch?v=Ez5WRn55g5s): массовка в HD.
 
 ## Зачем я это сделал
 
@@ -42,6 +51,7 @@ English: [README.md](README.md)
 - 3D-сцены в разрешении экрана, спрайты и интерфейс из HD-пака, по желанию свет и тени.
 - Язык — тот, что на вашем диске: поддерживаются американский выпуск и русский фанатский перевод.
 - Быстрые сохранения, ускорение, панель читов, осветление тёмных сцен.
+- Вспышки на весь экран в бою можно ослабить или выключить (клавиша F8).
 - Клавиша F6 — «отчёт о кадре»: снимок, данные кадра и сохранение в одной папке. Этим инструментом найдена большая часть ошибок, им же удобно сообщать о новых.
 
 ## Что не получилось

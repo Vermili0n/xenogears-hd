@@ -8,11 +8,20 @@ There are no game images here and there never will be — you need an image of y
 
 ![Xenogears HD: a scene in the game](docs/img/screenshot_bridge.png)
 
+## Download
+
+- **The build** `XenogearsHD_portable_nopack.zip` (90 MB): the [Releases](../../releases) page.
+- **The HD pack** `XenogearsHD_pack.zip` (9.8 GB): [Google Drive](https://drive.google.com/file/d/1YDdp8Z_BPnRCgyAuMYRyH30flTckT9Gc/view?usp=sharing). It is too big for GitHub, so it is not on the Releases page.
+
+What to do with them: [How to run it](#how-to-run-it).
+
 ## Video
 
 [![Xenogears HD: all Deathblows of Fei, Citan and Emeralda](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas)
 
 [All 34 Deathblows of Fei, Citan and Emeralda](https://www.youtube.com/watch?v=cxWjZwgbCas), recorded straight from the game (7 minutes).
+
+[A walk around Kislev](https://www.youtube.com/watch?v=Ez5WRn55g5s): the townspeople in HD.
 
 ## Why I did this
 
@@ -42,6 +51,7 @@ The scene textures come from a pack I bought several years ago from a private pe
 - 3D scenes at screen resolution, sprites and interface from the HD pack, optional light and shadows.
 - The language is the one on your disc: the American release and the Russian fan translation are supported.
 - Quick saves, turbo, a cheat panel, brightening of dark scenes.
+- The full-screen flashes in battle can be weakened or turned off (the F8 key).
 - The F6 key makes a "frame report": a screenshot, the data of that frame and a save in one folder. Most of the bugs were found with this tool, and it is the handy way to report new ones.
 
 ## What did not work out
