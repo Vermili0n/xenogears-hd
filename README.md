@@ -20,13 +20,27 @@ There are no game images here and there never will be — you need an image of y
 
 ### Step 1. Download the build
 
-`XenogearsHD_portable_nopack.zip` (90 MB) from the [Releases](../../releases) page. Unpack it anywhere.
+Open the [Releases](../../releases) page. In the top release, in the **Assets** list, download `XenogearsHD_portable_nopack.zip` (90 MB). You do not need "Source code".
+
+Unpack the archive anywhere. A folder named `XenogearsHD` appears — that is the game.
 
 ### Step 2. Download the HD pack
 
-`XenogearsHD_pack.zip` (9.8 GB) from [Google Drive](https://drive.google.com/file/d/1YDdp8Z_BPnRCgyAuMYRyH30flTckT9Gc/view?usp=sharing). It is too big for GitHub, so it is not on the Releases page. Unpack it into the build's folder: the archive holds a `pack` folder.
+Download `XenogearsHD_pack.zip` (9.8 GB) from [Google Drive](https://drive.google.com/file/d/1YDdp8Z_BPnRCgyAuMYRyH30flTckT9Gc/view?usp=sharing). It is not on GitHub: it is too big.
 
-SHA-256: `e488c54e3f712569989524a5b068532ff2952fe4e61e1bb0710fb30dd50fc0bf`
+The archive holds one folder, `pack`. Put it inside the `XenogearsHD` folder from step 1. It should look like this:
+
+```
+XenogearsHD\
+    Play.cmd      <- starts the game
+    Games\        <- your disc image goes here (step 3)
+    pack\         <- the HD pack
+    ...
+```
+
+If unpacking gave you `XenogearsHD_pack\pack\`, move the `pack` folder itself into `XenogearsHD`.
+
+SHA-256 of the archive: `e488c54e3f712569989524a5b068532ff2952fe4e61e1bb0710fb30dd50fc0bf`
 
 ### Step 3. Add your disc image
 
@@ -34,7 +48,28 @@ Put an image of your own disc 1 into the `Games` folder (BIN + CUE or CHD). Disc
 
 ### Step 4. Run `Play.cmd`
 
-You need Windows 10 or 11 and a video card with Vulkan or DirectX 12. Nothing has to be installed. Controls and the rest are in `README.txt` inside the build. Building from source: [docs/BUILD.md](docs/BUILD.md).
+You need Windows 10 or 11 and a video card with Vulkan or DirectX 12. Nothing has to be installed. The keys are below; the rest is in `README.txt` inside the build. Building from source: [docs/BUILD.md](docs/BUILD.md).
+
+## Controls
+
+| Key | What it does |
+|---|---|
+| Arrows | move |
+| X / Z / A / S | cross / circle / square / triangle |
+| Enter / Backspace | Start / Select |
+| Q, W / E, R | L1, R1 / L2, R2 |
+| Tab (hold) | the game runs 4 times faster |
+| F1 | cheat panel |
+| F2 | light and shadows on / off |
+| F3 | HD textures on / off |
+| F4 | win the current battle |
+| F5 / F9 | quick save / quick load |
+| F6 | frame report (a screenshot, the frame's data and a save in the `reports` folder) |
+| F7 | dark places brighter: off / weak / stronger |
+| F8 | battle flashes: as in the game / weak / off |
+| F11 | full screen / window |
+
+A gamepad works: A / B / X / Y are cross / circle / square / triangle, LB / RB are L1 / R1, the triggers are L2 / R2, Start / Back are Start / Select.
 
 ## Why I did this
 
@@ -63,8 +98,7 @@ The scene textures come from a pack I bought several years ago from a private pe
 - The game can be played to the end, both discs.
 - 3D scenes at screen resolution, sprites and interface from the HD pack, optional light and shadows.
 - The language is the one on your disc: the American release and the Russian fan translation are supported.
-- Quick saves, turbo, a cheat panel, brightening of dark scenes.
-- The full-screen flashes in battle can be weakened or turned off (the F8 key).
+- Quick saves, turbo, a cheat panel, brightening of dark scenes, battle flashes that can be weakened or turned off — the keys are in [Controls](#controls).
 - The F6 key makes a "frame report": a screenshot, the data of that frame and a save in one folder. Most of the bugs were found with this tool, and it is the handy way to report new ones.
 
 ## What did not work out
