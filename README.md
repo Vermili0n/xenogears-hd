@@ -8,13 +8,6 @@ There are no game images here and there never will be — you need an image of y
 
 ![Xenogears HD: a scene in the game](docs/img/screenshot_bridge.png)
 
-## Download
-
-- **The build** `XenogearsHD_portable_nopack.zip` (90 MB): the [Releases](../../releases) page.
-- **The HD pack** `XenogearsHD_pack.zip` (9.8 GB): [Google Drive](https://drive.google.com/file/d/1YDdp8Z_BPnRCgyAuMYRyH30flTckT9Gc/view?usp=sharing). It is too big for GitHub, so it is not on the Releases page.
-
-What to do with them: [How to run it](#how-to-run-it).
-
 ## Video
 
 [![Xenogears HD: all Deathblows of Fei, Citan and Emeralda](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas)
@@ -22,6 +15,26 @@ What to do with them: [How to run it](#how-to-run-it).
 [All 34 Deathblows of Fei, Citan and Emeralda](https://www.youtube.com/watch?v=cxWjZwgbCas), recorded straight from the game (7 minutes).
 
 [A walk around Kislev](https://www.youtube.com/watch?v=Ez5WRn55g5s): the townspeople in HD.
+
+## How to run it
+
+### Step 1. Download the build
+
+`XenogearsHD_portable_nopack.zip` (90 MB) from the [Releases](../../releases) page. Unpack it anywhere.
+
+### Step 2. Download the HD pack
+
+`XenogearsHD_pack.zip` (9.8 GB) from [Google Drive](https://drive.google.com/file/d/1YDdp8Z_BPnRCgyAuMYRyH30flTckT9Gc/view?usp=sharing). It is too big for GitHub, so it is not on the Releases page. Unpack it into the build's folder: the archive holds a `pack` folder.
+
+SHA-256: `e488c54e3f712569989524a5b068532ff2952fe4e61e1bb0710fb30dd50fc0bf`
+
+### Step 3. Add your disc image
+
+Put an image of your own disc 1 into the `Games` folder (BIN + CUE or CHD). Disc 2 goes there too; it is needed at the end of the first one.
+
+### Step 4. Run `Play.cmd`
+
+You need Windows 10 or 11 and a video card with Vulkan or DirectX 12. Nothing has to be installed. Controls and the rest are in `README.txt` inside the build. Building from source: [docs/BUILD.md](docs/BUILD.md).
 
 ## Why I did this
 
@@ -83,16 +96,6 @@ More about the pipeline: [docs/SPRITES.md](docs/SPRITES.md).
 ## What it cost
 
 I did not keep exact count. Roughly 500 dollars and two weeks of my time, I think. A lot of that time went into finding the approach: how best to set it all up, from the RetroArch emulator to a port on Godot.
-
-## How to run it
-
-1. Download the ready build `XenogearsHD_portable_nopack.zip` from the [Releases](../../releases) page and unpack it.
-2. Download the HD pack `XenogearsHD_pack.zip` (9.8 GB): [Google Drive](https://drive.google.com/file/d/1YDdp8Z_BPnRCgyAuMYRyH30flTckT9Gc/view?usp=sharing). Unpack it into the build's folder: the archive holds a `pack` folder.
-   SHA-256: `e488c54e3f712569989524a5b068532ff2952fe4e61e1bb0710fb30dd50fc0bf`
-3. Put an image of your own disc 1 into the `Games` folder (BIN + CUE or CHD). Disc 2 goes there too; it is needed at the end of the first one.
-4. Run `Play.cmd`.
-
-You need Windows 10 or 11 and a video card with Vulkan or DirectX 12. Nothing has to be installed. Controls and the rest are in `README.txt` inside the build. Building from source: [docs/BUILD.md](docs/BUILD.md).
 
 ## Working with the sprites
 

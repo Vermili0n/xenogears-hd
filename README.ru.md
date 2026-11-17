@@ -8,13 +8,6 @@ English: [README.md](README.md)
 
 ![Xenogears HD: сцена в игре](docs/img/screenshot_bridge.png)
 
-## Скачать
-
-- **Сборка** `XenogearsHD_portable_nopack.zip` (90 МБ): страница [Releases](../../releases).
-- **HD-пак** `XenogearsHD_pack.zip` (9,8 ГБ): [Google Диск](https://drive.google.com/file/d/1YDdp8Z_BPnRCgyAuMYRyH30flTckT9Gc/view?usp=sharing). Для GitHub он слишком велик, поэтому на странице Releases его нет.
-
-Что с ними делать: [Как запустить](#как-запустить).
-
 ## Видео
 
 [![Xenogears HD: все смертельные приёмы Фея, Ситана и Эмеральды](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas)
@@ -22,6 +15,26 @@ English: [README.md](README.md)
 [Все 34 смертельных приёма Фея, Ситана и Эмеральды](https://www.youtube.com/watch?v=cxWjZwgbCas), запись прямо из игры (7 минут).
 
 [Прогулка по Кислеву](https://www.youtube.com/watch?v=Ez5WRn55g5s): массовка в HD.
+
+## Как запустить
+
+### Шаг 1. Скачайте сборку
+
+`XenogearsHD_portable_nopack.zip` (90 МБ) со страницы [Releases](../../releases). Распакуйте в любую папку.
+
+### Шаг 2. Скачайте HD-пак
+
+`XenogearsHD_pack.zip` (9,8 ГБ) с [Google Диска](https://drive.google.com/file/d/1YDdp8Z_BPnRCgyAuMYRyH30flTckT9Gc/view?usp=sharing). Для GitHub он слишком велик, поэтому на странице Releases его нет. Распакуйте его в папку сборки: в архиве лежит папка `pack`.
+
+SHA-256: `e488c54e3f712569989524a5b068532ff2952fe4e61e1bb0710fb30dd50fc0bf`
+
+### Шаг 3. Положите образ своего диска
+
+Образ своего диска 1 — в папку `Games` (BIN + CUE или CHD). Диск 2 — туда же, он понадобится в конце первого.
+
+### Шаг 4. Запустите `Play.cmd`
+
+Нужны Windows 10 или 11 и видеокарта с Vulkan или DirectX 12. Устанавливать ничего не надо. Управление и остальные подробности — в `ПРОЧТИ.txt` внутри сборки (по-английски — `README.txt`). Как собрать из исходников — в [docs/BUILD.md](docs/BUILD.md).
 
 ## Зачем я это сделал
 
@@ -83,16 +96,6 @@ English: [README.md](README.md)
 ## Сколько это стоило
 
 Точно я не считал. Думаю, примерно 500 долларов и две недели моего времени. Много времени ушло на поиск подхода: как лучше всё устроить, от эмулятора RetroArch до порта на Godot.
-
-## Как запустить
-
-1. Скачайте готовую сборку `XenogearsHD_portable_nopack.zip` со страницы [Releases](../../releases) и распакуйте её.
-2. Скачайте HD-пак `XenogearsHD_pack.zip` (9,8 ГБ): [Google Диск](https://drive.google.com/file/d/1YDdp8Z_BPnRCgyAuMYRyH30flTckT9Gc/view?usp=sharing). Распакуйте его в папку сборки: в архиве лежит папка `pack`.
-   SHA-256: `e488c54e3f712569989524a5b068532ff2952fe4e61e1bb0710fb30dd50fc0bf`
-3. Положите образ своего диска 1 в папку `Games` (BIN + CUE или CHD). Диск 2 — туда же, он понадобится в конце первого.
-4. Запустите `Play.cmd`.
-
-Нужны Windows 10 или 11 и видеокарта с Vulkan или DirectX 12. Устанавливать ничего не надо. Управление и остальные подробности — в `ПРОЧТИ.txt` внутри сборки (по-английски — `README.txt`). Как собрать из исходников — в [docs/BUILD.md](docs/BUILD.md).
 
 ## Как работать со спрайтами
 
