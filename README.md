@@ -10,11 +10,9 @@ There are no game images here and there never will be — you need an image of y
 
 ## Video
 
-[![Xenogears HD: all Deathblows of Fei, Citan and Emeralda](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas)
-
-[All 34 Deathblows of Fei, Citan and Emeralda](https://www.youtube.com/watch?v=cxWjZwgbCas), recorded straight from the game (7 minutes).
-
-[A walk around Kislev](https://www.youtube.com/watch?v=Ez5WRn55g5s): the townspeople in HD.
+| [![Xenogears HD: all Deathblows of Fei, Citan and Emeralda](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas) | [![Xenogears HD: a walk around Kislev](https://img.youtube.com/vi/Ez5WRn55g5s/hqdefault.jpg)](https://www.youtube.com/watch?v=Ez5WRn55g5s) |
+|:---:|:---:|
+| [All 34 Deathblows of Fei, Citan and Emeralda](https://www.youtube.com/watch?v=cxWjZwgbCas), recorded straight from the game (7 minutes) | [A walk around Kislev](https://www.youtube.com/watch?v=Ez5WRn55g5s): the townspeople in HD |
 
 ## How to run it
 

@@ -10,11 +10,9 @@ English: [README.md](README.md)
 
 ## Видео
 
-[![Xenogears HD: все смертельные приёмы Фея, Ситана и Эмеральды](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas)
-
-[Все 34 смертельных приёма Фея, Ситана и Эмеральды](https://www.youtube.com/watch?v=cxWjZwgbCas), запись прямо из игры (7 минут).
-
-[Прогулка по Кислеву](https://www.youtube.com/watch?v=Ez5WRn55g5s): массовка в HD.
+| [![Xenogears HD: все смертельные приёмы Фея, Ситана и Эмеральды](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas) | [![Xenogears HD: прогулка по Кислеву](https://img.youtube.com/vi/Ez5WRn55g5s/hqdefault.jpg)](https://www.youtube.com/watch?v=Ez5WRn55g5s) |
+|:---:|:---:|
+| [Все 34 смертельных приёма Фея, Ситана и Эмеральды](https://www.youtube.com/watch?v=cxWjZwgbCas), запись прямо из игры (7 минут) | [Прогулка по Кислеву](https://www.youtube.com/watch?v=Ez5WRn55g5s): массовка в HD |
 
 ## Как запустить
 
