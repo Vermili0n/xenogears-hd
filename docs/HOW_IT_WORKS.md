@@ -25,6 +25,12 @@ bridge needs (see BUILD.md).
   (the Godot camera stays at the origin and the core moves the world): scene polygons, model vertices with their
   animation (MIMe) and joints, sprite pieces, particles. The battle, the world map and the gear arena are drawn in
   the PS1 painter's order ("as is"); the field uses a depth buffer.
+- **Scene joins**: Weltall joins the seams of a map's scenery - a vertex of one placed model is drawn at a point of
+  another, so that pieces the map's data leaves a hair apart meet. A join holds only while both models stand as the
+  map's data places them (Weltall's `IsAsBuilt`; its own renderer does the same); once a script moves either model,
+  the corner is its own model's again. The port used to apply every join in every frame: one model placed twice close
+  together (two motorbikes) drew a thin polygon stretched from one to the other once a cutscene drove them apart.
+  `info.scenery_unjoined` counts the corners let go; F6's `frame.txt` lists them.
 - `xeno_core.*` - the `XenoCore` class GDScript talks to: `open`, `step(buttons)`, `info()`, `fill_world`,
   `fill_screen`, `vram`, save states, cheats, `frame_report`.
 - `xeno_discs.*`, `xeno_translation.*` - find disc images by content (Weltall's library scan; the Russian fan
@@ -78,6 +84,16 @@ BC7 blocks - or `.png`; PNG wins when both exist). The core already computes the
   This catches pieces the game alters slightly before upload and Weltall's own stand-in pilot sprites. Texels the game
   draws but the original lacked are drawn from VRAM under the picture. `alias_record=<file>` writes every lookup as a
   table line (`?` where nothing was found), so a line can be added by hand.
+- **Pieces in a wider cell**: a sheet the game uploads in strips (a map's own sprite file) draws some parts in a cell
+  narrower than the one they are kept in on the disc: the piece is the left of the part, and the part is the piece's
+  width rounded up to whole 16-bit units of its page, transparent in the columns beyond. Neither the strip's name nor
+  the piece's exact texels are then in the pack or in the index. So a sprite piece is also looked up, last, as itself
+  padded on the right with transparent texels to whole units. The key is the same as an exact piece's, so the index
+  and the table's `region-piece` lines answer it, and the piece is drawn over its share of the part's picture.
+  Lookups of equal size come first and keep their pictures; among equal candidates the index's order decides. The
+  table grew from 146 to 210 lines (lookups recorded this way, and others met on more runs). F6 names such a piece
+  "found by content in a wider cell"; `XENO_WITHOUT_PADDED=1` switches the rule off for comparisons. Known risk: a
+  few parts are drawn differently in different pictures of the pack, and a lookup by content can take the other one.
 - **Palette hold** (`palhold=1|0`, on by default): a pack name carries the CRC of the whole palette, every colour of
   it, whether the upload's texels use it or not. The world map animates its water by rewriting the last 8 entries of
   two CLUT rows, entries the land's uploads never use: the land keeps its colours, but its name changes with each state
@@ -99,6 +115,12 @@ BC7 blocks - or `.png`; PNG wins when both exist). The core already computes the
 - **Loading**: pictures load on worker threads. Scenery pages show the original texels until they are ready. Sprite and
   2D pictures new in a frame are loaded with priority and the frame waits for them for up to about 17 ms
   ("lazy sync", as the author's emulator setting did), so animation frames do not flash low-resolution.
+- **Polygons drawn from VRAM** keep to their own corners' texels: a model's polygon on a page without pictures, or
+  whose page is still loading, samples only from its corners' first to last texel, inclusive (Weltall's reference
+  renderer clamps field polygons the same way). The PS1 steps its texels in whole numbers inside the corners; a GPU's
+  interpolation may land a hair outside - a flat strip at v = 128 read at 127.9999 - and read the row above, another
+  texture's, which showed on some GPUs as white-and-black noise on the top of a wall. A caller's own range (the world
+  map's pieces) stands; a texture window has none.
 
 What the pack does not have is drawn from the original VRAM texels (scaled), never left blank.
 

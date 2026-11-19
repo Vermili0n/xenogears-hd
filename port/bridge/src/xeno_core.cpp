@@ -671,9 +671,11 @@ namespace godot
 		Out["screen_textured"] = Info.ScreenTextured;
 		Out["screen_hd"] = Info.ScreenHd;
 		Out["sprite_waiting"] = Info.SpriteWaiting;
+		Out["sprite_padded"] = Info.SpritePadded;
 		Out["screen_waiting"] = Info.ScreenWaiting;
 		Out["scenery_hd"] = Info.SceneryHd;
 		Out["scenery_laid"] = Info.SceneryLaid;
+		Out["scenery_unjoined"] = Info.SceneryUnjoined;
 		Out["scenery_vram"] = Info.SceneryVram;
 		// The battle: drawn as the PS1 draws it (unlit: no sun, no SSAO, no soft shadows), in its frame's drawing order.
 		Out["battle"] = Info.bBattle;

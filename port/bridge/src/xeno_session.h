@@ -275,6 +275,11 @@ namespace Xeno
 		 */
 		int SpriteWaiting = 0, ScreenWaiting = 0;
 		/**
+		 * The last BuildWorld's sprite pieces drawn from a picture found by content as the piece padded on the right to whole
+		 * units (a part the disc keeps in a wider cell, drawn narrower from a sheet uploaded in strips; RegionAlias).
+		 */
+		int SpritePadded = 0;
+		/**
 		 * The last BuildWorld's textured scenery polygons: from a page with the pack's pictures laid in, or from VRAM; and
 		 * of the first, those whose texels lie (partly) in uploads the pack has no picture of (they show the page's own
 		 * texels there, scaled up).
@@ -285,6 +290,11 @@ namespace Xeno
 		 * on a floor): drawn a hair nearer the eye along its line of sight, so the depth buffer gives them the PS1's order.
 		 */
 		int SceneryLaid = 0;
+		/**
+		 * The last BuildWorld's field scenery corners joined to another model (Weltall's FieldSceneJoins) whose join does not
+		 * hold: it or that model does not stand as the map's data places it (moved by a script), so the corner is its own.
+		 */
+		int SceneryUnjoined = 0;
 		/**
 		 * The Battle program runs and its show has begun: BuildWorld and BuildScreen draw its frame. In battle the scene is
 		 * drawn as the PS1 draws it, unlit (no sun, no soft shadows), in the frame's own drawing order (C1's w per vertex).

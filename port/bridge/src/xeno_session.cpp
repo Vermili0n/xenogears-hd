@@ -279,6 +279,8 @@ namespace Xeno
 			 * lacked (u | v << 16 in the picture's texels), drawn from VRAM under the picture so it shows no holes there.
 			 */
 			std::vector<uint32> Added;
+			/** Found as the piece padded to whole units (RegionAlias): the piece's own width in texels; 0 otherwise. */
+			int PaddedFrom = 0;
 		};
 
 		void Push(FMeshBuffers& Mesh, const FCorner& Corner, const std::array<float, 3>& Normal, const FLook& Look)
@@ -938,9 +940,13 @@ namespace Xeno
 		int ScreenTextured = 0, ScreenHd = 0, ScreenNoUpload = 0, ScreenAllInPack = 0;
 		/** Sprite pieces and 2D primitives drawn from VRAM (in whole or in part) because their picture is not loaded yet. */
 		int SpriteWaiting = 0, ScreenWaiting = 0;
+		/** Sprite pieces found by content as the piece padded to whole units (FFrameInfo::SpritePadded). */
+		int SpritePadded = 0;
 		int SceneryHd = 0, SceneryVram = 0, SceneryHdMixed = 0;
 		/** Field scenery polygons laid on one drawn before them, drawn nearer the eye (FFrameInfo::SceneryLaid). */
 		int SceneryLaid = 0;
+		/** Field scenery corners whose join does not hold this frame, drawn at their own model's place (FFrameInfo::SceneryUnjoined). */
+		int SceneryUnjoined = 0;
 		/** The last BuildWorld's triangles that blend (not opaque). */
 		int WorldBlended = 0;
 		/**
@@ -1616,6 +1622,10 @@ namespace Xeno
 						Hit.AddV = static_cast<float>(Part.FromV - MinV);
 						Hit.Wide = static_cast<float>(Part.UploadUnitsWide * Per);
 						Hit.High = static_cast<float>(Part.UploadUnitsHigh);
+						if (bSprite)
+						{
+							AuditPadded(Vram, Page, Clut, MinU, MinV, Wide, High, Hit);
+						}
 						return Hit;
 					}
 				}
@@ -1658,6 +1668,53 @@ namespace Xeno
 				MissLog += "\n";
 			}
 			return Found;
+		}
+
+		/**
+		 * XENO_PAD_AUDIT=<file> (checks): a sprite piece found by its own name, narrower than whole units, looked up by
+		 * content padded to whole units as if it had no name (RegionAlias's last lookup, the index only, nothing remembered):
+		 * a line with the picture by name and where the piece lies in it, and the picture the padded lookup takes - to see
+		 * whether that rule names another drawing for pieces whose own picture is known.
+		 */
+		void AuditPadded(const FVram& Vram, const FTexturePage& Page, const FClutPosition& Clut, int MinU, int MinV, int Wide, int High, const FHdHit& ByName) const
+		{
+			static std::FILE* Audit = std::getenv("XENO_PAD_AUDIT") != nullptr ? std::fopen(std::getenv("XENO_PAD_AUDIT"), "ab") : nullptr;
+			const int Per = TexelsPerUnit(Page.Depth);
+			const int PaddedWide = (Wide + Per - 1) / Per * Per;
+			if (Audit == nullptr || Per == 1 || PaddedWide == Wide || Page.Y >= FVram::Height || MinU + Wide > 256 || MinV + High > 256)
+			{
+				return;
+			}
+			std::vector<uint16> Colours(Per == 4 ? 16 : 256);
+			for (std::size_t Colour = 0; Colour < Colours.size(); ++Colour)
+			{
+				Colours[Colour] = Vram.TexelAt(Clut.X + static_cast<int>(Colour), Clut.Y);
+			}
+			const uint32 Palette = Crc32OfUnits(Colours);
+			std::vector<uint16> Texels(static_cast<std::size_t>(PaddedWide * High), 0);
+			int Opaque = 0;
+			for (int V = 0; V < High; ++V)
+			{
+				for (int U = 0; U < Wide; ++U)
+				{
+					const int PageU = MinU + U;
+					const uint16 Word = Vram.TexelAt(Page.X + PageU / Per, Page.Y + MinV + V);
+					const uint16 Colour = Per == 4 ? Vram.TexelAt(Clut.X + (Word >> ((PageU & 3) * 4) & 15), Clut.Y)
+						: Vram.TexelAt(Clut.X + (Word >> ((PageU & 1) * 8) & 255), Clut.Y);
+					Texels[static_cast<std::size_t>(V * PaddedWide + U)] = Colour == 0 ? uint16{0} : static_cast<uint16>(0x8000 | (Colour & 0x7FFF));
+					Opaque += Colour != 0 ? 1 : 0;
+				}
+			}
+			const FAliasFound Found = BestInIndex(Palette, Texels, PaddedWide, High);
+			if (Found.Key == 0)
+			{
+				return;
+			}
+			// view, piece, opaque texels; the picture by name and the piece's place in it; the padded lookup's picture.
+			std::fprintf(Audit, "%08x,%d,%d,%d,%d,%d,%s,%g,%g,%g,%g,%s,%d,%d,%d\n", PackTextureView(Page, Clut), MinU, MinV, Wide, High, Opaque,
+				ByName.Texture.c_str(), ByName.AddU, ByName.AddV, ByName.Wide, ByName.High,
+				BeetleTextureFileName({static_cast<uint32>(Found.Key >> 32), static_cast<uint32>(Found.Key)}).c_str(), PaddedWide, Found.Conflicts, Found.Edges);
+			std::fflush(Audit);
 		}
 
 		/** The whole page's picture (the page's 256 rows of 64 units and the CLUT's 16 colours), as the user's core names it. */
@@ -2274,7 +2331,10 @@ namespace Xeno
 		 * The picture of a sprite piece's own texels found by content, when neither its upload's names nor its drawn
 		 * rectangle's are in the pack (a piece of a sheet uploaded whole or in strips, whose pictures are named by the
 		 * pieces' rectangles): the drawn rectangle (RectHit's units) and then the piece's texels exactly, each compared as
-		 * AliasName compares an upload. Placed in the picture as RectHit places it.
+		 * AliasName compares an upload. Placed in the picture as RectHit places it. Last, the piece padded on the right with
+		 * transparent texels to whole units of its page: a part kept in a cell of whole units (as a disc file stores its
+		 * blocks) that the game draws narrower, from a sheet uploaded in strips (a map's own sprite file), is that very
+		 * part; the piece is drawn over its share of the part's picture.
 		 */
 		FHdHit RegionAlias(const FVram& Vram, const FTexturePage& Page, const FClutPosition& Clut, int MinU, int MinV, int Wide, int High) const
 		{
@@ -2294,18 +2354,25 @@ namespace Xeno
 			// The drawn rectangle (whole units, a row less: the user's core's), then the piece's texels as they are.
 			const int X0 = MinU / Per;
 			const int Words = (MinU + Wide + 1) / Per - X0;
-			const std::array<std::array<int, 4>, 2> Regions{{{X0 * Per, MinV, Words * Per, High - 1}, {MinU, MinV, Wide, High}}};
+			// The piece's width in whole units of the page (the padded lookup; the same width: none).
+			// XENO_WITHOUT_PADDED=1 (comparisons): without the padded lookup, as before it.
+			static const bool bWithoutPadded = std::getenv("XENO_WITHOUT_PADDED") != nullptr;
+			const int PaddedWide = bWithoutPadded ? Wide : (Wide + Per - 1) / Per * Per;
+			const std::array<std::array<int, 4>, 3> Regions{{{X0 * Per, MinV, Words * Per, High - 1}, {MinU, MinV, Wide, High}, {MinU, MinV, PaddedWide, High}}};
 			for (std::size_t Which = 0; Which < Regions.size(); ++Which)
 			{
 				const auto& [U0, V0, RegionWide, RegionHigh] = Regions[Which];
-				if (RegionWide <= 0 || RegionHigh <= 0 || U0 + RegionWide > 256 || V0 + RegionHigh > 256)
+				const bool bPadded = Which == 2;
+				// The texels read from VRAM: the region's, the padded one's only the piece's (the rest transparent).
+				const int ReadWide = bPadded ? Wide : RegionWide;
+				if (RegionWide <= 0 || RegionHigh <= 0 || U0 + ReadWide > 256 || V0 + RegionHigh > 256 || (bPadded && PaddedWide == Wide))
 				{
 					continue;
 				}
-				std::vector<uint16> Texels(static_cast<std::size_t>(RegionWide * RegionHigh));
+				std::vector<uint16> Texels(static_cast<std::size_t>(RegionWide * RegionHigh), 0);
 				for (int V = 0; V < RegionHigh; ++V)
 				{
-					for (int U = 0; U < RegionWide; ++U)
+					for (int U = 0; U < ReadWide; ++U)
 					{
 						const int PageU = U0 + U;
 						const uint16 Word = Vram.TexelAt(Page.X + PageU / Per, Page.Y + V0 + V);
@@ -2326,10 +2393,77 @@ namespace Xeno
 					Hit.Wide = static_cast<float>(RegionWide);
 					Hit.High = static_cast<float>(RegionHigh);
 					Hit.Added = AliasFound[Own].Added;
+					Hit.PaddedFrom = bPadded ? Wide : 0;
 					return Hit;
 				}
 			}
 			return Hit;
+		}
+
+		/**
+		 * The index's best picture for these texels (Wide x High, of this palette): the candidate of the same size and palette
+		 * with the fewest opaque texels of another colour, then the fewest opaque in one only; taken (Key) when no colour
+		 * differs and the texels opaque in one only are at most max(2, 5 %). Nothing remembered or recorded.
+		 */
+		FAliasFound BestInIndex(uint32 Palette, const std::vector<uint16>& Texels, int Wide, int High) const
+		{
+			FAliasFound Found;
+			Found.Texels = Wide * High;
+			const auto Bucket = AliasBySize.find(static_cast<uint32>(Wide) << 16 | static_cast<uint32>(High));
+			if (Bucket == AliasBySize.end())
+			{
+				return Found;
+			}
+			// The best candidate: fewest opaque texels of another colour, then fewest texels opaque in one only.
+			for (const FAliasEntry& Entry : Bucket->second)
+			{
+				// The user's rule takes a part of the same palette only (alias_dump_parts.py: by (palette, w, h)).
+				if (static_cast<uint32>(Entry.Key) != Palette)
+				{
+					continue;
+				}
+				int Conflicts = 0, Edges = 0;
+				for (std::size_t Texel = 0; Texel < Texels.size() && Conflicts <= Found.Conflicts + 64; ++Texel)
+				{
+					const uint16 A = Texels[Texel], B = Entry.Texels[Texel];
+					if ((A != 0) != (B != 0))
+					{
+						++Edges;
+					}
+					else if (A != 0 && A != B)
+					{
+						// The user's tolerance: 8 of 255 a channel, one step of 31.
+						const int Dr = std::abs((A & 31) - (B & 31)), Dg = std::abs((A >> 5 & 31) - (B >> 5 & 31)), Db = std::abs((A >> 10 & 31) - (B >> 10 & 31));
+						Conflicts += Dr > 1 || Dg > 1 || Db > 1 ? 1 : 0;
+					}
+				}
+				if (Found.Best == 0 || Conflicts < Found.Conflicts || (Conflicts == Found.Conflicts && Edges < Found.Edges))
+				{
+					Found.Best = Entry.Key;
+					Found.Conflicts = Conflicts;
+					Found.Edges = Edges;
+				}
+			}
+			if (Found.Best != 0 && Found.Conflicts == 0 && Found.Edges <= std::max(2, Found.Texels / 20) && InPack(Found.Best) != nullptr)
+			{
+				Found.Key = Found.Best;
+				for (const FAliasEntry& Entry : Bucket->second)
+				{
+					if (Entry.Key != Found.Key)
+					{
+						continue;
+					}
+					for (std::size_t Texel = 0; Texel < Texels.size(); ++Texel)
+					{
+						if (Texels[Texel] != 0 && Entry.Texels[Texel] == 0)
+						{
+							Found.Added.push_back(static_cast<uint32>(Texel % static_cast<std::size_t>(Wide)) | static_cast<uint32>(Texel / static_cast<std::size_t>(Wide)) << 16);
+						}
+					}
+					break;
+				}
+			}
+			return Found;
 		}
 
 		/**
@@ -2349,7 +2483,6 @@ namespace Xeno
 			const bool bUpload = std::strcmp(Kind, "upload") == 0;
 			const auto& Rows = bUpload ? AliasByUpload : AliasByTexels;
 			const auto Row = Rows.find(Own);
-			const auto Bucket = AliasBySize.find(static_cast<uint32>(Wide) << 16 | static_cast<uint32>(High));
 			if (Row != Rows.end() && Row->second.Wide == Wide && Row->second.High == High && Row->second.Palette == Palette && InPack(Row->second.Key) != nullptr)
 			{
 				Found.Key = Found.Best = Row->second.Key;
@@ -2357,57 +2490,9 @@ namespace Xeno
 				Found.Edges = static_cast<int>(Row->second.Added.size());
 				Found.Added = Row->second.Added;
 			}
-			else if (Bucket != AliasBySize.end())
+			else
 			{
-				// The best candidate: fewest opaque texels of another colour, then fewest texels opaque in one only.
-				for (const FAliasEntry& Entry : Bucket->second)
-				{
-					// The user's rule takes a part of the same palette only (alias_dump_parts.py: by (palette, w, h)).
-					if (static_cast<uint32>(Entry.Key) != Palette)
-					{
-						continue;
-					}
-					int Conflicts = 0, Edges = 0;
-					for (std::size_t Texel = 0; Texel < Texels.size() && Conflicts <= Found.Conflicts + 64; ++Texel)
-					{
-						const uint16 A = Texels[Texel], B = Entry.Texels[Texel];
-						if ((A != 0) != (B != 0))
-						{
-							++Edges;
-						}
-						else if (A != 0 && A != B)
-						{
-							// The user's tolerance: 8 of 255 a channel, one step of 31.
-							const int Dr = std::abs((A & 31) - (B & 31)), Dg = std::abs((A >> 5 & 31) - (B >> 5 & 31)), Db = std::abs((A >> 10 & 31) - (B >> 10 & 31));
-							Conflicts += Dr > 1 || Dg > 1 || Db > 1 ? 1 : 0;
-						}
-					}
-					if (Found.Best == 0 || Conflicts < Found.Conflicts || (Conflicts == Found.Conflicts && Edges < Found.Edges))
-					{
-						Found.Best = Entry.Key;
-						Found.Conflicts = Conflicts;
-						Found.Edges = Edges;
-					}
-				}
-				if (Found.Best != 0 && Found.Conflicts == 0 && Found.Edges <= std::max(2, Found.Texels / 20) && InPack(Found.Best) != nullptr)
-				{
-					Found.Key = Found.Best;
-					for (const FAliasEntry& Entry : Bucket->second)
-					{
-						if (Entry.Key != Found.Key)
-						{
-							continue;
-						}
-						for (std::size_t Texel = 0; Texel < Texels.size(); ++Texel)
-						{
-							if (Texels[Texel] != 0 && Entry.Texels[Texel] == 0)
-							{
-								Found.Added.push_back(static_cast<uint32>(Texel % static_cast<std::size_t>(Wide)) | static_cast<uint32>(Texel / static_cast<std::size_t>(Wide)) << 16);
-							}
-						}
-						break;
-					}
-				}
+				Found = BestInIndex(Palette, Texels, Wide, High);
 			}
 			if (AliasReport != nullptr)
 			{
@@ -2601,12 +2686,20 @@ namespace Xeno
 				return;
 			}
 			++(Hit->Kind == FHdHit::Upload ? HdUpload : HdRect);
+			SpritePadded += Tally == ETally::Sprite && Hit->PaddedFrom != 0 ? 1 : 0;
 			if (Dumping2D())
 			{
-				char Text[160];
+				char Text[480];
 				std::snprintf(Text, sizeof(Text), "pack-%s %s add %g,%g size %gx%g", Hit->Kind == FHdHit::Upload ? "upload" : "rect", Hit->Texture.c_str(), Hit->AddU,
 					Hit->AddV, Hit->Wide, Hit->High);
 				DumpPath = Text;
+				if (Hit->PaddedFrom != 0)
+				{
+					// Found by content as the piece padded to whole units (RegionAlias): which part, which size.
+					std::snprintf(Text, sizeof(Text), " (found by content in a wider cell: the piece %dx%g texels is the left of the part %gx%g, its picture's left %d/%g)",
+						Hit->PaddedFrom, Hit->High, Hit->Wide, Hit->High, Hit->PaddedFrom, Hit->Wide);
+					DumpPath += Text;
+				}
 			}
 			// The picture holds the page's texels from (-AddU, -AddV) on, Wide x High of them.
 			const float HeldU0 = -Hit->AddU, HeldU1 = Hit->Wide - Hit->AddU, HeldV0 = -Hit->AddV, HeldV1 = Hit->High - Hit->AddV;
@@ -3019,6 +3112,22 @@ namespace Xeno
 					Dump(" (%s) -> %s", Report->Who.c_str(), DumpPath.c_str());
 				}
 				Dump("\n");
+			}
+			// From VRAM a polygon samples only its own corners' texels, first to last inclusive (Weltall's reference renderer,
+			// FieldSceneMesh.cpp TexelMin/TexelMax, FieldScene.usf PolygonTexel): the PS1 steps its texels in integers inside
+			// them, while a GPU's interpolation may land a hair outside (a flat strip at v = 128 read at 127.9999 takes the
+			// row above, another texture's). A caller's own range (the world map's pieces) stands; a texture window has none.
+			if (bTextured && Look.Clamp[2] < 0.0f && (static_cast<int>(Look.Flags) & static_cast<int>(FlagWindow)) == 0)
+			{
+				float MinU = 256.0f, MinV = 256.0f, MaxU = 0.0f, MaxV = 0.0f;
+				for (int Corner = 0; Corner < Count; ++Corner)
+				{
+					MinU = std::min(MinU, Corners[static_cast<std::size_t>(Corner)].U);
+					MinV = std::min(MinV, Corners[static_cast<std::size_t>(Corner)].V);
+					MaxU = std::max(MaxU, Corners[static_cast<std::size_t>(Corner)].U);
+					MaxV = std::max(MaxV, Corners[static_cast<std::size_t>(Corner)].V);
+				}
+				Look.Clamp = {MinU, MinV, MaxU, MaxV};
 			}
 			// A page the display has not built yet is drawn from VRAM until it has (asked for meanwhile).
 			if (bPictures && !IsReady(Key))
@@ -7266,6 +7375,7 @@ namespace Xeno
 		Info.ScreenTextured = I.ScreenTextured;
 		Info.ScreenHd = I.ScreenHd;
 		Info.SpriteWaiting = I.SpriteWaiting;
+		Info.SpritePadded = I.SpritePadded;
 		Info.ScreenWaiting = I.ScreenWaiting;
 		Info.ScreenNoUpload = I.ScreenNoUpload;
 		Info.ScreenAllInPack = I.ScreenAllInPack;
@@ -7273,6 +7383,7 @@ namespace Xeno
 		Info.SceneryVram = I.SceneryVram;
 		Info.SceneryHdMixed = I.SceneryHdMixed;
 		Info.SceneryLaid = I.SceneryLaid;
+		Info.SceneryUnjoined = I.SceneryUnjoined;
 		Info.ScreenPrimitives = I.ScreenPrimitives;
 		Info.ScreenHash = I.ScreenHash;
 		Info.Waiting = I.Waiting;
@@ -7941,7 +8052,8 @@ namespace Xeno
 		I.HdBeyond = I.SpriteBeyond = I.KindsPlainDrawn = I.BattleGlyphs = I.KindsRimDrawn = I.KindsRimTexels = I.KindsRimScenery = 0;
 		I.SpritePieces = I.SpriteHd = I.SpritePartial = I.SpriteVram = I.SpriteNoUpload = I.SpriteAllInPack = I.SpriteSplitGaps = 0;
 		I.SpriteWaiting = 0;
-		I.SceneryHd = I.SceneryVram = I.SceneryHdMixed = I.SceneryLaid = 0;
+		I.SpritePadded = 0;
+		I.SceneryHd = I.SceneryVram = I.SceneryHdMixed = I.SceneryLaid = I.SceneryUnjoined = 0;
 		I.Waiting = 0;
 		I.FrameHits.clear();
 		I.PageStates.clear();
@@ -8060,7 +8172,22 @@ namespace Xeno
 			for (std::size_t Corner = 0; Corner < Count; ++Corner)
 			{
 				const uint16 Vertex = Primitive.Vertices[Corner];
-				if (const FFieldSceneJoin* Join = Scene.JoinOf(Polygon.Object, Vertex))
+				// A join (FieldSceneJoins.h) holds only while both models stand as the map's data places them (Weltall's renderer,
+				// FieldFrameGeometry.cpp FJoinsHeld): once a script moves either, the corner is its own model's again (two
+				// moving motorbikes of one map otherwise draw a polygon stretched from one to the other).
+				const FFieldSceneJoin* Join = Scene.JoinOf(Polygon.Object, Vertex);
+				const bool bJoinHolds = Join != nullptr && Scenery.Objects[Polygon.Object].bAsBuilt && Scenery.Objects[Join->Anchor].bAsBuilt;
+				if (Join != nullptr && !bJoinHolds)
+				{
+					++I.SceneryUnjoined;
+					if (I.Report != nullptr)
+					{
+						I.Dump("unjoined: polygon %zu object %u vertex %u: its join to object %u does not hold (as built: %d, %d)\n", Number,
+							static_cast<unsigned>(Polygon.Object), static_cast<unsigned>(Vertex), static_cast<unsigned>(Join->Anchor),
+							Scenery.Objects[Polygon.Object].bAsBuilt ? 1 : 0, Scenery.Objects[Join->Anchor].bAsBuilt ? 1 : 0);
+					}
+				}
+				if (bJoinHolds)
 				{
 					Out[Corner] = Apply(Scenery.Objects[Join->Anchor].Exact, Join->Point[0], Join->Point[1], Join->Point[2]);
 				}
