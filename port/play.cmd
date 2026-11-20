@@ -27,6 +27,9 @@ rem   play.cmd ff=8000             a new game, the opening skipped to Fei's room
 rem   play.cmd card=out\saves\usa.srm slot=0   your USA memory card's first save (a copy; near Lahan)
 rem   play.cmd boot=1              the console switched on: publisher's notice, opening movie, title (New Game: Up, then X)
 rem   play.cmd lang=en             the English text (USA disc 1); the window title shows which (RU / EN)
+rem   play.cmd ui=en               the shell's own lines (F1 panel, notes, window title) in English (ui=ru: Russian);
+rem                                else the F1 panel's Language button's choice, else Russian with the Russian disc or
+rem                                a Russian Windows, English otherwise
 rem   play.cmd encounters=0        random battles off from the start (also on the F1 panel)
 rem   play.cmd turbo=4             the game always at 4 times its pace (turbo=2: twice)
 rem   play.cmd flash=0             the battle flashes off from the start (as F8; 1 weak, 2 as in the game)

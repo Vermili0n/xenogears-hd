@@ -69,6 +69,8 @@ You need Windows 10 or 11 and a video card with Vulkan or DirectX 12. Nothing ha
 
 A gamepad works: A / B / X / Y are cross / circle / square / triangle, LB / RB are L1 / R1, the triggers are L2 / R2, Start / Back are Start / Select.
 
+The mod's own lines — the F1 panel, the notes over the game, the black window that checks the discs before the start — are in English or Russian; the game's text is the one on your disc. The language is chosen by itself: Russian with the Russian disc or a Russian Windows, English otherwise. The **Language / Язык** button on the F1 panel switches it in the game, and the game remembers the choice; from a command prompt, `Play.cmd ui=en` or `Play.cmd ui=ru` sets it for that run.
+
 ## Why I did this
 
 I first met Xenogears as a teenager, and the depth of its story struck me. I can't say I have played many JRPGs, but I consider this game's story one of the best in the genre.

@@ -10,6 +10,8 @@ extends Node3D
 ##   out/saves/game, states out/states, alias_index out/alias/sprite_alias_index.bin, alias_table
 ##   data/sprite_alias_table.csv, movies out/movies)
 ##   lang=ru|en|auto (auto: the discs in the games folder found by content, the Russian translation's disc 1 first)
+##   ui=ru|en (the shell's own lines - the F1 panel, the notes, the window's title - in Russian or English for this run;
+##   else the player's choice on the F1 panel, else Russian where the translation plays or Windows is Russian, _choose_ui)
 ##   rus=<image> (lang=ru: the translation's image, games_ru/xenogears_rus_xz.CUE)  alias_index=<file>  movies=<folder>
 ##   (disc 2 is taken by the bridge where the game asks for it, found by content: the translation's disc 2 in the folder
 ##   of rus= and then in games=, the USA's in games=; while it is missing a line over the game says where, _follow_disc)
@@ -60,7 +62,8 @@ extends Node3D
 ## Weltall's own fast-forward runs (a battle, the field, the world map), F4 wins the battle being fought. On the command
 ## line: encounters=0 (random battles off), turbo=<2|4> (always that pace, live play); in a script @cheat=<cheat> (as
 ## core.cheat: money:N, exp:fei:N, level:fei:K, fill:party, deathblows:fei|party, gears, item:<list>:<id>:<count>, win, encounters:0) and
-## @panel / @panel=<tab> (the panel shown or hidden, for shots); in at=: turbo<N>, panel.
+## @panel / @panel=<tab> (the panel shown or hidden, for shots), @ui=ru|en (the shell's language from then on, not kept);
+## in at=: turbo<N>, panel, ui (the panel's language button pressed: the other language, kept).
 
 const PAD := {
 	"select": 0, "l3": 1, "r3": 2, "start": 3, "up": 4, "right": 5, "down": 6, "left": 7, "l2": 8, "r2": 9,
@@ -337,6 +340,7 @@ var notes_shown := true
 ## to put where, for as long as it is missing (_follow_disc); the disc it was about.
 var disc_note: Label
 var disc_noted := 0
+var disc_note_of: Array = []
 ## A scripted @snap: shots taken so far, and one being taken (the script waits for it).
 var snaps := 0
 var snapping := false
@@ -382,6 +386,104 @@ var turbo_always := 1
 var turbo_rate := 1
 ## The inventory's lists as the bridge numbers them (FSession::CheatItems).
 const ITEM_LISTS := ["Предметы", "Оружие", "Аксессуары", "Оружие гиров", "Части гиров"]
+## The shell's own lines in English (the game's text is the disc's): each Russian line of the shell, as the code has it,
+## and its English, the terms as the USA disc has them. _t gives a line in the shell's language (ui_lang); a line with
+## %-substitutions is looked up whole, before the %; a line missing here stays Russian (tools/ui_text_check.py lists those).
+const UI_EN := {
+	# The levels of F7 and F8, the window's title.
+	"выкл": "off",
+	"вкл": "on",
+	"слабо": "weak",
+	"сильнее": "stronger",
+	"как в игре": "as in the game",
+	"Xenogears (Godot)   текст: %s   F2 свет: %s   F3 HD: %s   F7 тёмное: %s   F8 вспышки: %s   F11 экран": "Xenogears (Godot)   text: %s   F2 light: %s   F3 HD: %s   F7 dark places: %s   F8 flashes: %s   F11 full screen",
+	"Xenogears (Godot): игра не запустилась": "Xenogears (Godot): the game could not start",
+	# The game that could not start.
+	"В папке с образами нет диска 1 Xenogears: ни русского перевода, ни американского (USA).\n%s\n\nПоложите туда образ (BIN+CUE или CHD) и запустите игру снова. Подробнее — в ПРОЧТИ.txt.": "There is no Xenogears disc 1 in the disc images folder: neither the Russian translation's nor the American (USA) one.\n%s\n\nPut a disc image there (BIN+CUE or CHD) and start the game again. More in READ_FIRST.txt.",
+	"Игра не запустилась: ": "The game could not start: ",
+	"\n\n(Закройте это окно.)": "\n\n(Close this window.)",
+	# The notes.
+	"HD-текстур нет (папка pack): игра идёт с оригинальной графикой PlayStation": "No HD textures (the pack folder): the game runs with the original PlayStation graphics",
+	"Диск %d найден — нажмите «подтвердить» (X), и игра пойдёт дальше": "Disc %d found: press Confirm (X) and the game goes on",
+	"русского перевода": "of the Russian translation",
+	"Нужен диск %d %s: положите его образ (BIN+CUE или CHD, имя любое) в папку\n%s — игра найдёт его сама": "Disc %d %s is needed: put its image (BIN+CUE or CHD, any name) into the folder\n%s and the game will find it by itself",
+	"Бой выигран (F4)": "Battle won (F4)",
+	"Победа (F4) сейчас недоступна: ": "Win (F4) not available now: ",
+	"Сохранено: ": "Saved: ",
+	"Не сохранено: сейчас нельзя (только когда герой в вашей власти)": "Not saved: not now (only while you control the hero)",
+	"Не сохранено: ": "Not saved: ",
+	"Не загружено: в %s нет сохранений (F5)": "Not loaded: no states in %s (F5)",
+	"Не загружено: ": "Not loaded: ",
+	"Загружено: ": "Loaded: ",
+	"Отчёт о кадре: ": "Frame report: ",
+	"Тёмные места светлее (F7): ": "Dark places brighter (F7): ",
+	"Вспышки в бою (F8): ": "Battle flashes (F8): ",
+	" (не запомнено: ошибка %d)": " (not remembered: error %d)",
+	"Язык интерфейса: русский": "Interface language: English",
+	# The cheats' reasons (_cheat_why).
+	"сейчас не бой": "not in a battle now",
+	"исход боя уже решён (сюжетный бой ведёт сценарий)": "the battle's outcome is already decided (a story battle follows its script)",
+	"только на поле и на карте мира": "only on the field and the world map",
+	"уже последний уровень": "already at the last level",
+	"список полон": "the list is full",
+	"сейчас учить больше нечего: следующий приём требует уровня или открывается сюжетом": "nothing to learn now: the next Deathblow needs a higher level or opens with the story",
+	# The cheat panel (F1).
+	"Язык / Language: русский": "Language / Язык: English",
+	"Читы — F1 или Esc: закрыть. Пока панель открыта, игра на паузе.": "Cheats: F1 or Esc to close. The game is paused while the panel is open.",
+	"Всё, что изменено здесь, попадает в сохранения, сделанные после (File в меню игры, F5).": "Whatever is changed here goes into the saves made afterwards (File in the game's menu, F5).",
+	"Партия и деньги": "Party and money",
+	"Быстрая игра": "Fast play",
+	"Предметы": "Items",
+	"Все приёмы всей партии": "Party: all Deathblows",
+	"Уровень, опыт и приёмы (deathblows) даёт правило самой игры, как за выигранный бой: статы растут по таблицам диска; приём учится, только если уровень героя не ниже нужного, 7-AP приёмы — когда их откроет сюжет; за опыт остальные персонажи получают четверть, как запасные.": "Levels, EXP and Deathblows come by the game's own rule, as for a battle won: stats grow by the disc's tables; a Deathblow is learned only at the level it needs, the 7-AP ones once the story opens them; of the EXP the other characters get a quarter, as the reserve does.",
+	"Установить": "Set",
+	"Гиры: HP и топливо полностью": "Gears: full HP and Fuel",
+	"Случайные бои выключены (настройка самого Weltall «Encounters: None»)": "Random battles off (Weltall's own setting \"Encounters: None\")",
+	"Скорость игры:": "Game speed:",
+	"обычная (Tab — ×4, пока держишь)": "normal (Tab held: ×4)",
+	"всегда ×2": "always ×2",
+	"всегда ×4": "always ×4",
+	"Ускоряется там же, где ускоряет сам Weltall: бой, поле (и сценки на нём), карта мира; ролики, меню и экран итогов боя идут как есть. Звук идёт в своём темпе: музыка не ускоряется, звуки игры звучат чаще.": "Faster where Weltall's own fast-forward works: battles, the field (and its scenes), the world map; movies, menus and the battle results run as they are. The sound keeps its pace: the music is not faster, the game's sounds come more often.",
+	"Победить в бою (F4)": "Win the battle (F4)",
+	"Победа — по правилам самой игры: враги падают, игра сама даёт опыт, деньги и находки и показывает итоги. В сюжетном бою исход ведёт сценарий.": "The win follows the game's own rules: the enemies fall, the game gives its EXP, G and items and shows the results. In a story battle the script decides the outcome.",
+	"Оружие": "Weapons",
+	"Аксессуары": "Accessories",
+	"Оружие гиров": "Gear weapons",
+	"Части гиров": "Gear parts",
+	"Сколько:": "Count:",
+	"Названия — из таблиц диска (на обоих дисках английские). Предмет кладётся, как его кладёт сама игра: в ячейку с ним или в первую свободную, не больше 99.": "The names are the disc's (English on both discs). An item is put where the game itself puts it: into its own slot or the first free one, 99 at most.",
+	"Сейчас менять нельзя: уровни, приёмы, HP/EP, деньги, предметы и гиры меняются только на поле и на карте мира (в бою у партии свои копии, итоги боя перепишут их).": "Nothing can be changed now: levels, Deathblows, HP/EP, money, items and Gears change only on the field and the world map (in battle the party has its own copies, the battle's results would overwrite them).",
+	"%s — уровень %d (эфирный %d)\nопыт %d, до следующего %d · эфирный опыт %d, до следующего %d\nHP %d/%d   EP %d/%d   атака %d, защита %d, ловкость %d, эфир %d, эф. защита %d, точность %d, уклонение %d": "%s: level %d (Ether level %d)\nEXP %d, next level in %d · Ether EXP %d, next in %d\nHP %d/%d   EP %d/%d   Attack %d, Defense %d, Agility %d, Ether %d, Ether Def %d, Hit %d, Evade %d",
+	"+1 уровень": "+1 level",
+	"+10 уровней": "+10 levels",
+	"+10 000 опыта": "+10 000 EXP",
+	"HP и EP полностью": "Full HP and EP",
+	"Выучить все приёмы": "Learn all Deathblows",
+	"Не сделано: ": "Not done: ",
+	"%s: HP %d/%d, топливо %d/%d": "%s: HP %d/%d, Fuel %d/%d",
+	"Партии нет (игра ещё не началась).": "No party (the game has not started yet).",
+	"Деньги: %d G": "Money: %d G",
+	"Гиры партии: ": "The party's Gears: ",
+	"у партии сейчас нет гиров": "the party has no Gears now",
+	"Бой: врагов на ногах %d": "Battle: enemies standing %d",
+	"Исход боя уже решён": "The battle's outcome is decided",
+	"Сейчас не бой": "Not in a battle now",
+	"Сейчас менять нельзя: только на поле и на карте мира.": "Nothing can be changed now: only on the field and the world map.",
+	"В сумке (предметы): ": "In the bag (items): ",
+	"пусто": "empty",
+	"приёмы: %d из %d": "Deathblows: %d of %d",
+	"приёмов у героя нет (бой их не учит)": "no Deathblows for this hero (battles teach none)",
+	"%s — с ур. %d": "%s at level %d",
+	"; следующий: ": "; next: ",
+	"; ещё %d (7 AP) откроет сюжет": "; %d more (7 AP) open with the story",
+	"; AP за ход %d": "; AP per turn %d",
+	"%s (есть %d)": "%s (have %d)",
+}
+## The shell's language, "ru" or "en" (_choose_ui), and where it came from (the frame report's settings line).
+var ui_lang := "ru"
+var ui_from := ""
+## The window's title last set (printed when it changes).
+var title_shown := ""
 
 
 func _ready() -> void:
@@ -405,7 +507,9 @@ func _ready() -> void:
 		print("xeno: discs in ", games, ": ", survey)
 		translation = survey.get("russian_disc_1", "")
 		if translation.is_empty() and String(survey.get("usa_disc_1", "")).is_empty():
-			_fail_in_window("В папке с образами нет диска 1 Xenogears: ни русского перевода, ни американского (USA).\n%s\n\nПоложите туда образ (BIN+CUE или CHD) и запустите игру снова. Подробнее — в ПРОЧТИ.txt." % games.replace("/", "\\"))
+			# No disc open: the shell's language by Windows' alone.
+			_choose_ui(args, "")
+			_fail_in_window(_t("В папке с образами нет диска 1 Xenogears: ни русского перевода, ни американского (USA).\n%s\n\nПоложите туда образ (BIN+CUE или CHD) и запустите игру снова. Подробнее — в ПРОЧТИ.txt.") % games.replace("/", "\\"))
 			return
 	elif lang == "ru":
 		translation = _from_root(args.get("rus", RUSSIAN_DISC))
@@ -414,6 +518,7 @@ func _ready() -> void:
 			translation = ""
 	var error := core.open(games, translation)
 	print("xeno: language ", core.language())
+	_choose_ui(args, core.language())
 	disc_played = translation if not translation.is_empty() else "USA disc 1 in " + games
 	hd = args.get("hd", "1") == "1"
 	lit = args.get("light", "1") == "1"
@@ -472,7 +577,7 @@ func _ready() -> void:
 		error = core.enter_field(int(args.get("map", "4")))
 	if not error.is_empty():
 		push_error("xeno: " + error)
-		_fail_in_window("Игра не запустилась: " + error)
+		_fail_in_window(_t("Игра не запустилась: ") + error)
 		return
 	# encounters=0: random battles off from the start (Weltall's own setting, kept over F9 and the title).
 	if args.get("encounters", "1") == "0":
@@ -778,7 +883,7 @@ func _process(delta: float) -> void:
 		if want_sound:
 			_start_sound()
 		if pack_missing:
-			_show_note("HD-текстур нет (папка pack): игра идёт с оригинальной графикой PlayStation")
+			_show_note(_t("HD-текстур нет (папка pack): игра идёт с оригинальной графикой PlayStation"))
 			note_until = Time.get_ticks_msec() + 10000
 	elif last_process > 0:
 		longest_gap = maxi(longest_gap, now - last_process)
@@ -802,6 +907,9 @@ func _process(delta: float) -> void:
 		elif action == "flash":
 			# F8 pressed (for checks: the level kept for the next start).
 			_next_flash()
+		elif action == "ui":
+			# The F1 panel's language button pressed (for checks: the language kept for the next start).
+			_set_ui("en" if ui_lang == "ru" else "ru", true)
 		elif action.begins_with("hold="):
 			# Buttons held from now on as a player holds them (for checks of live play: a run, a walk); hold=none lets go.
 			live_hold = _buttons_of(action.substr(5))
@@ -930,6 +1038,9 @@ func _play_script() -> void:
 					flash_level = clampi(int(action.substr(6)), 0, FLASH_NAMES.size() - 1)
 					core.set_battle_flashes(flash_level)
 					_show_title()
+				elif action.begins_with("ui="):
+					# The shell's language for what follows (not kept): @ui=ru|en.
+					_set_ui("en" if action.substr(3) == "en" else "ru", false)
 				elif action == "panel" or action.begins_with("panel="):
 					# The cheat panel shown or hidden (for shots), on a tab: @panel=<0-2>.
 					_toggle_cheat_panel(int(action.substr(6)) if action.begins_with("panel=") else -1)
@@ -1333,14 +1444,22 @@ func _follow_disc(info: Dictionary) -> void:
 		# Found, or no longer asked for (another game loaded).
 		if int(info.get("discs_held", 0)) & (1 << (disc_noted - 1)):
 			print("xeno: disc %d found" % disc_noted)
-			_show_note("Диск %d найден — нажмите «подтвердить» (X), и игра пойдёт дальше" % disc_noted)
+			_show_note(_t("Диск %d найден — нажмите «подтвердить» (X), и игра пойдёт дальше") % disc_noted)
 	else:
-		var release := "русского перевода" if info.get("disc_wanted_kind", "") == "rus" else "(USA)"
 		var folder: String = String(info.get("disc_wanted_folder", "")).replace("/", "\\")
-		disc_note.text = "Нужен диск %d %s: положите его образ (BIN+CUE или CHD, имя любое) в папку\n%s — игра найдёт его сама" % [wanted, release, folder]
+		disc_note_of = [wanted, info.get("disc_wanted_kind", "") == "rus", folder]
+		_say_disc_wanted()
 		print("xeno: disc %d wanted in %s" % [wanted, folder])
 		disc_note.visible = notes_shown
 	disc_noted = wanted
+
+
+## The line of the disc wanted (disc_note_of: its number, whether the translation's, the folder) in the shell's language.
+func _say_disc_wanted() -> void:
+	if disc_note_of.is_empty():
+		return
+	var release := _t("русского перевода") if disc_note_of[1] else "(USA)"
+	disc_note.text = _t("Нужен диск %d %s: положите его образ (BIN+CUE или CHD, имя любое) в папку\n%s — игра найдёт его сама") % [disc_note_of[0], release, disc_note_of[2]]
 
 
 ## The movie showing replaced by its video when movies/<source>/<NN>.ogv is there (MOVIES says how it is named and timed):
@@ -1489,7 +1608,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	match key:
 		KEY_F4:
 			var error := _cheat("win")
-			_show_note("Бой выигран (F4)" if error.is_empty() else "Победа (F4) сейчас недоступна: " + _cheat_why(error))
+			_show_note(_t("Бой выигран (F4)") if error.is_empty() else _t("Победа (F4) сейчас недоступна: ") + _cheat_why(error))
 		KEY_F2:
 			lit = not lit
 			_apply_options()
@@ -1522,11 +1641,11 @@ func _save_state() -> void:
 	var error := core.save_state(path)
 	print("xeno: F5 ", path if error.is_empty() else error, " ", core.info())
 	if error.is_empty():
-		_show_note("Сохранено: " + path.get_file())
+		_show_note(_t("Сохранено: ") + path.get_file())
 	elif error.begins_with("not now"):
-		_show_note("Не сохранено: сейчас нельзя (только когда герой в вашей власти)")
+		_show_note(_t("Не сохранено: сейчас нельзя (только когда герой в вашей власти)"))
 	else:
-		_show_note("Не сохранено: " + error)
+		_show_note(_t("Не сохранено: ") + error)
 
 
 ## F9: the newest save state in the states folder loaded over the game running, at any moment. The bridge starts the
@@ -1547,7 +1666,7 @@ func _load_latest_state() -> void:
 				newest_time = time
 				newest = path
 	if newest.is_empty():
-		_show_note("Не загружено: в " + states_folder + " нет сохранений (F5)")
+		_show_note(_t("Не загружено: в %s нет сохранений (F5)") % states_folder)
 		return
 	_load_state_file(newest)
 
@@ -1560,7 +1679,7 @@ func _load_state_file(newest: String) -> void:
 	print("xeno: F9 ", newest, " '", error, "' in %.1f ms " % (load_usec / 1000.0), core.info())
 	if error in ["not a state", "a state of another version", "a damaged state", "a state of another disc"]:
 		# The file was refused before anything was replaced: the game runs on as it was.
-		_show_note("Не загружено: " + newest.get_file() + ": " + error)
+		_show_note(_t("Не загружено: ") + newest.get_file() + ": " + error)
 		return
 	# Otherwise the console was powered on afresh: with the state, or (it could not be entered) from the start.
 	_forget_game()
@@ -1572,9 +1691,9 @@ func _load_state_file(newest: String) -> void:
 			sound_playback = sound_player.get_stream_playback()
 			sound_room = sound_playback.get_frames_available()
 	if error.is_empty():
-		_show_note("Загружено: " + newest.get_file())
+		_show_note(_t("Загружено: ") + newest.get_file())
 	else:
-		_show_note("Не загружено: " + newest.get_file() + ": " + error)
+		_show_note(_t("Не загружено: ") + newest.get_file() + ": " + error)
 	_refresh()
 
 
@@ -1707,8 +1826,8 @@ func _frame_report() -> void:
 	# The disc in the drive (the second once the story or a save of it took it) and one the game waits on, if any.
 	lines.append("drive: disc %d (%s, %s)%s" % [int(before.get("drive_disc", 0)), before.get("drive_disc_id", ""), String(before.get("drive_disc_file", "")).replace("/", "\\"),
 		"; waiting on disc %d, not found in %s" % [int(before.get("disc_wanted", 0)), before.get("disc_wanted_folder", "")] if int(before.get("disc_wanted", 0)) > 0 else ""])
-	lines.append("settings: hd %s (pack %s, %d pictures, by content %s), light %s, dark places brightened %d (%s, F7), battle flashes %d (%s, F8), turbo %d (Tab adds x%d), hd_sync %s, palette hold %s" % [hd, pack_path, core.pack_pictures(), alias_found if alias_on else "off", lit,
-		dark_level, DARK_NAMES[dark_level], flash_level, FLASH_NAMES[flash_level], turbo_rate, TURBO_KEY_RATE, hd_sync, "on" if core.palette_hold() else "off (palhold=0)"])
+	lines.append("settings: hd %s (pack %s, %d pictures, by content %s), light %s, dark places brightened %d (%s, F7), battle flashes %d (%s, F8), turbo %d (Tab adds x%d), hd_sync %s, palette hold %s, shell language %s (from %s)" % [hd, pack_path, core.pack_pictures(), alias_found if alias_on else "off", lit,
+		dark_level, DARK_NAMES[dark_level], flash_level, FLASH_NAMES[flash_level], turbo_rate, TURBO_KEY_RATE, hd_sync, "on" if core.palette_hold() else "off (palhold=0)", ui_lang, ui_from])
 	lines.append("shot.png: the window as shown, %d x %d; pictures still loading %d, primitives drawn from VRAM while their picture loads %d (info.waiting)" % [shot.get_width(), shot.get_height(), still_loading, int(before.get("waiting", 0))])
 	lines.append("shot_plain.png: %s" % ("the same frame with the pack, the light and the brightening of dark places off (F3, F2, F7), set back after" if hd_was or lit_was or dark_was > 0 else "the pack and the light were off already: the same picture"))
 	if source.is_empty():
@@ -1746,7 +1865,7 @@ func _frame_report() -> void:
 	last_process = Time.get_ticks_usec()
 	reporting = false
 	print("xeno: F6 %s in %.1f ms (shot %.1f, text %.1f, state %.1f, plain %.1f): state %s, %d frames since it, game %s, still loading %d; %s" % [folder, (Time.get_ticks_usec() - started) / 1000.0, shot_usec / 1000.0, text_usec / 1000.0, state_usec / 1000.0, plain_usec / 1000.0, source if not source.is_empty() else "none (" + String(state.get("error", "")) + ")", inputs.size(), "unchanged" if unchanged else "CHANGED", still_loading, core.info()])
-	_show_note("Отчёт о кадре: " + folder)
+	_show_note(_t("Отчёт о кадре: ") + folder)
 
 
 ## Each frame's buttons as script= reads them: runs of the same buttons, "<frames>:<button>+<button>" or "<frames>:none";
@@ -1829,7 +1948,7 @@ func _fail_in_window(text: String) -> void:
 	back.set_anchors_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(back)
 	var label := Label.new()
-	label.text = text + "\n\n(Закройте это окно.)"
+	label.text = text + _t("\n\n(Закройте это окно.)")
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	label.offset_left = 48
@@ -1838,7 +1957,7 @@ func _fail_in_window(text: String) -> void:
 	label.offset_bottom = -48
 	label.add_theme_font_size_override("font_size", 24)
 	layer.add_child(label)
-	DisplayServer.window_set_title("Xenogears (Godot): игра не запустилась")
+	_set_title(_t("Xenogears (Godot): игра не запустилась"))
 	failed_to_start = true
 
 
@@ -1894,8 +2013,83 @@ func _apply_options() -> void:
 
 
 func _show_title() -> void:
-	DisplayServer.window_set_title("Xenogears (Godot)   текст: %s   F2 свет: %s   F3 HD: %s   F7 тёмное: %s   F8 вспышки: %s   F11 экран" % [core.language().to_upper(),
-		"вкл" if lit else "выкл", "вкл" if hd else "выкл", DARK_NAMES[dark_level], FLASH_NAMES[flash_level]])
+	_set_title(_t("Xenogears (Godot)   текст: %s   F2 свет: %s   F3 HD: %s   F7 тёмное: %s   F8 вспышки: %s   F11 экран") % [core.language().to_upper(),
+		_t("вкл" if lit else "выкл"), _t("вкл" if hd else "выкл"), _t(DARK_NAMES[dark_level]), _t(FLASH_NAMES[flash_level])])
+
+
+## The window's title, printed when it changes (for checks of the shell's language).
+func _set_title(title: String) -> void:
+	DisplayServer.window_set_title(title)
+	if title != title_shown:
+		title_shown = title
+		print("xeno: title ", title)
+
+
+## The shell's language (UI_EN): ui=ru|en on the command line; else the player's choice on the F1 panel (user://settings.cfg,
+## written only when its button is pressed; runs with a script, a shot or quit_after never read it, as F7's and F8's);
+## else Russian where the Russian translation plays (disc "ru", core.language()) or Windows' own language is Russian,
+## English otherwise. disc "": no disc open yet (the window saying there is none), Windows' language alone.
+func _choose_ui(args: Dictionary, disc: String) -> void:
+	var windows := OS.get_locale_language()
+	var kept := ConfigFile.new()
+	if String(args.get("ui", "")) in ["ru", "en"]:
+		ui_lang = args["ui"]
+		ui_from = "ui="
+	elif not unattended and kept.load(SETTINGS_FILE) == OK and String(kept.get_value("display", "ui", "")) in ["ru", "en"]:
+		ui_lang = kept.get_value("display", "ui")
+		ui_from = SETTINGS_FILE
+	else:
+		ui_lang = "ru" if disc == "ru" or windows == "ru" else "en"
+		ui_from = "the rule: disc %s, Windows %s" % [disc if not disc.is_empty() else "not open", windows]
+	print("xeno: ui language %s (from %s)" % [ui_lang, ui_from])
+
+
+## A line of the shell in its language: the Russian as the code has it, or its English (UI_EN); a line not there stays Russian.
+func _t(text: String) -> String:
+	return UI_EN.get(text, text) if ui_lang == "en" else text
+
+
+## The shell's language switched (the F1 panel's button, at= ui; @ui= for scripts, not kept): the panel's lines, the
+## window's title and the disc's line at once, the notes from the next one on.
+func _set_ui(lang: String, keep: bool) -> void:
+	ui_lang = lang
+	if cheat_layer != null:
+		_relabel(cheat_layer)
+		if cheat_open:
+			_fill_cheat_panel()
+	_say_disc_wanted()
+	_show_title()
+	var error := OK
+	if keep:
+		ui_from = SETTINGS_FILE
+		var settings := ConfigFile.new()
+		settings.load(SETTINGS_FILE)
+		settings.set_value("display", "ui", ui_lang)
+		error = settings.save(SETTINGS_FILE)
+	else:
+		ui_from = "@ui="
+	print("xeno: ui language %s (from %s)" % [ui_lang, ui_from])
+	if keep:
+		_show_note(_t("Язык интерфейса: русский") + ("" if error == OK else _t(" (не запомнено: ошибка %d)") % error))
+
+
+## The panel's fixed lines in the shell's language: each control keeps its Russian in its meta (_ui_text), a tab bar its tabs',
+## a list its items'.
+func _relabel(node: Node) -> void:
+	if node.has_meta("ui_ru"):
+		node.set("text", _t(node.get_meta("ui_ru")))
+	if node.has_meta("ui_ru_items"):
+		var items: Array = node.get_meta("ui_ru_items")
+		for index in items.size():
+			node.call("set_tab_title" if node is TabContainer else "set_item_text", index, _t(items[index]))
+	for child in node.get_children():
+		_relabel(child)
+
+
+## A control's fixed line set in the shell's language, its Russian kept for _relabel.
+func _ui_text(control: Control, text: String) -> void:
+	control.set_meta("ui_ru", text)
+	control.set("text", _t(text))
 
 
 ## F7's level onto its layer (off: the layer hidden, no screen copy made).
@@ -1916,7 +2110,7 @@ func _next_dark() -> void:
 	settings.load(SETTINGS_FILE)
 	settings.set_value("display", "dark", dark_level)
 	var error := settings.save(SETTINGS_FILE)
-	_show_note("Тёмные места светлее (F7): " + DARK_NAMES[dark_level] + ("" if error == OK else " (не запомнено: ошибка %d)" % error))
+	_show_note(_t("Тёмные места светлее (F7): ") + _t(DARK_NAMES[dark_level]) + ("" if error == OK else _t(" (не запомнено: ошибка %d)") % error))
 
 
 ## F8: the battle flashes' next level (as in the game -> weak -> off -> as in the game), kept for the next start.
@@ -1928,7 +2122,7 @@ func _next_flash() -> void:
 	settings.load(SETTINGS_FILE)
 	settings.set_value("display", "flash", flash_level)
 	var error := settings.save(SETTINGS_FILE)
-	_show_note("Вспышки в бою (F8): " + FLASH_NAMES[flash_level] + ("" if error == OK else " (не запомнено: ошибка %d)" % error))
+	_show_note(_t("Вспышки в бою (F8): ") + _t(FLASH_NAMES[flash_level]) + ("" if error == OK else _t(" (не запомнено: ошибка %d)") % error))
 
 
 ## The brightening of dark places over what is drawn under it (the screen's copy): the brightest channel y lifted to
@@ -2390,21 +2584,21 @@ func _cheat(command: String) -> String:
 	return error
 
 
-## The bridge's reasons in Russian for the panel and the notes.
+## The bridge's reasons in the shell's language for the panel and the notes.
 func _cheat_why(error: String) -> String:
 	match error:
 		"not in a battle":
-			return "сейчас не бой"
+			return _t("сейчас не бой")
 		"the battle's end is already decided":
-			return "исход боя уже решён (сюжетный бой ведёт сценарий)"
+			return _t("исход боя уже решён (сюжетный бой ведёт сценарий)")
 		"only on the field or the world map":
-			return "только на поле и на карте мира"
+			return _t("только на поле и на карте мира")
 		"already at the last level":
-			return "уже последний уровень"
+			return _t("уже последний уровень")
 		"the list is full":
-			return "список полон"
+			return _t("список полон")
 		"nothing more to learn now":
-			return "сейчас учить больше нечего: следующий приём требует уровня или открывается сюжетом"
+			return _t("сейчас учить больше нечего: следующий приём требует уровня или открывается сюжетом")
 	return error
 
 
@@ -2475,10 +2669,24 @@ func _build_cheat_panel() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	panel.add_child(box)
+	# The title, and at its right the shell's language (the other one when pressed, kept): its line in both languages, its
+	# face no taller than the title's line, so the panel under it lies as it did before the button.
+	var head := HBoxContainer.new()
+	box.add_child(head)
 	var title := Label.new()
-	title.text = "Читы — F1 или Esc: закрыть. Пока панель открыта, игра на паузе."
+	_ui_text(title, "Читы — F1 или Esc: закрыть. Пока панель открыта, игра на паузе.")
 	title.add_theme_font_size_override("font_size", 22)
-	box.add_child(title)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(title)
+	var language := _cheat_button(head, "Язык / Language: русский", func(): _set_ui("en" if ui_lang == "ru" else "ru", true))
+	language.add_theme_font_size_override("font_size", 16)
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		var face := look.get_stylebox(state, "Button").duplicate() as StyleBoxFlat
+		face.content_margin_top = 1
+		face.content_margin_bottom = 1
+		language.add_theme_stylebox_override(state, face)
+	language.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	cheat_ui.language = language
 	box.add_child(_cheat_label("Всё, что изменено здесь, попадает в сохранения, сделанные после (File в меню игры, F5).", Color(0.75, 0.85, 1.0), 1140))
 	var tabs := TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -2489,7 +2697,6 @@ func _build_cheat_panel() -> void:
 	var party := VBoxContainer.new()
 	party.add_theme_constant_override("separation", 8)
 	tabs.add_child(party)
-	tabs.set_tab_title(0, "Партия и деньги")
 	cheat_ui.party_note = _cheat_label("", Color(1.0, 0.8, 0.5), 1140)
 	party.add_child(cheat_ui.party_note)
 	# Up to three heroes of five lines each: they scroll where the panel is too short for them.
@@ -2508,7 +2715,7 @@ func _build_cheat_panel() -> void:
 	cheat_ui.deathblows_party = _cheat_button(party_wide, "Все приёмы всей партии", func():
 		var error := _cheat("deathblows:party")
 		if not error.is_empty():
-			_show_note("Не сделано: " + _cheat_why(error)))
+			_show_note(_t("Не сделано: ") + _cheat_why(error)))
 	cheat_ui.deathblows_party.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	party_wide.add_child(_cheat_label("Уровень, опыт и приёмы (deathblows) даёт правило самой игры, как за выигранный бой: статы растут по таблицам диска; приём учится, только если уровень героя не ниже нужного, 7-AP приёмы — когда их откроет сюжет; за опыт остальные персонажи получают четверть, как запасные.", Color(0.7, 0.7, 0.75), 900))
 	var money := HBoxContainer.new()
@@ -2535,9 +2742,8 @@ func _build_cheat_panel() -> void:
 	var fast := VBoxContainer.new()
 	fast.add_theme_constant_override("separation", 10)
 	tabs.add_child(fast)
-	tabs.set_tab_title(1, "Быстрая игра")
 	var encounters := CheckButton.new()
-	encounters.text = "Случайные бои выключены (настройка самого Weltall «Encounters: None»)"
+	_ui_text(encounters, "Случайные бои выключены (настройка самого Weltall «Encounters: None»)")
 	encounters.toggled.connect(func(on: bool): _cheat("encounters:%d" % (0 if on else 1)))
 	fast.add_child(encounters)
 	cheat_ui.encounters = encounters
@@ -2546,8 +2752,9 @@ func _build_cheat_panel() -> void:
 	fast.add_child(speed)
 	speed.add_child(_cheat_label("Скорость игры:", Color(1, 1, 1)))
 	var turbo := OptionButton.new()
-	for text in ["обычная (Tab — ×4, пока держишь)", "всегда ×2", "всегда ×4"]:
-		turbo.add_item(text)
+	turbo.set_meta("ui_ru_items", ["обычная (Tab — ×4, пока держишь)", "всегда ×2", "всегда ×4"])
+	for text in turbo.get_meta("ui_ru_items"):
+		turbo.add_item(_t(text))
 	turbo.item_selected.connect(func(index: int): turbo_always = [1, 2, 4][index])
 	speed.add_child(turbo)
 	cheat_ui.turbo = turbo
@@ -2564,15 +2771,17 @@ func _build_cheat_panel() -> void:
 	var items := VBoxContainer.new()
 	items.add_theme_constant_override("separation", 10)
 	tabs.add_child(items)
-	tabs.set_tab_title(2, "Предметы")
+	tabs.set_meta("ui_ru_items", ["Партия и деньги", "Быстрая игра", "Предметы"])
+	_relabel(tabs)
 	cheat_ui.items_note = _cheat_label("", Color(1.0, 0.8, 0.5), 1140)
 	items.add_child(cheat_ui.items_note)
 	var pick := HBoxContainer.new()
 	pick.add_theme_constant_override("separation", 10)
 	items.add_child(pick)
 	var kind := OptionButton.new()
+	kind.set_meta("ui_ru_items", ITEM_LISTS)
 	for text in ITEM_LISTS:
-		kind.add_item(text)
+		kind.add_item(_t(text))
 	pick.add_child(kind)
 	cheat_ui.item_kind = kind
 	var item := OptionButton.new()
@@ -2595,10 +2804,12 @@ func _build_cheat_panel() -> void:
 	items.add_child(cheat_ui.items_held)
 
 
-## A label of the panel; with a width, wrapped within it.
+## A label of the panel (its text in Russian, shown in the shell's language; "": one filled later); with a width, wrapped
+## within it.
 func _cheat_label(text: String, color: Color, width := 0) -> Label:
 	var label := Label.new()
-	label.text = text
+	if not text.is_empty():
+		_ui_text(label, text)
 	label.add_theme_color_override("font_color", color)
 	if width > 0:
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2608,7 +2819,7 @@ func _cheat_label(text: String, color: Color, width := 0) -> Label:
 
 func _cheat_button(parent: Control, text: String, pressed: Callable) -> Button:
 	var button := Button.new()
-	button.text = text
+	_ui_text(button, text)
 	button.pressed.connect(pressed)
 	parent.add_child(button)
 	return button
@@ -2618,7 +2829,7 @@ func _cheat_button(parent: Control, text: String, pressed: Callable) -> Button:
 func _fill_cheat_panel() -> void:
 	var state := core.cheat_state()
 	var edit: bool = state.can_edit
-	cheat_ui.party_note.text = "" if edit else "Сейчас менять нельзя: уровни, приёмы, HP/EP, деньги, предметы и гиры меняются только на поле и на карте мира (в бою у партии свои копии, итоги боя перепишут их)."
+	cheat_ui.party_note.text = "" if edit else _t("Сейчас менять нельзя: уровни, приёмы, HP/EP, деньги, предметы и гиры меняются только на поле и на карте мира (в бою у партии свои копии, итоги боя перепишут их).")
 	cheat_ui.party_note.visible = not edit
 	# A hero's button with the keyboard's focus keeps it over the rows built anew (by its place among them).
 	var focused := get_viewport().gui_get_focus_owner()
@@ -2635,9 +2846,10 @@ func _fill_cheat_panel() -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
 		cheat_ui.heroes.add_child(row)
-		var info := _cheat_label("%s — уровень %d (эфирный %d)\nопыт %d, до следующего %d · эфирный опыт %d, до следующего %d\nHP %d/%d   EP %d/%d   атака %d, защита %d, ловкость %d, эфир %d, эф. защита %d, точность %d, уклонение %d" % [
+		var info := _cheat_label("", Color(1, 1, 1), 660)
+		info.text = _t("%s — уровень %d (эфирный %d)\nопыт %d, до следующего %d · эфирный опыт %d, до следующего %d\nHP %d/%d   EP %d/%d   атака %d, защита %d, ловкость %d, эфир %d, эф. защита %d, точность %d, уклонение %d") % [
 			hero.name, hero.level, hero.ether_level, hero.exp, hero.exp_next, hero.ether_exp, hero.ether_next, hero.hp, hero.max_hp, hero.ep, hero.max_ep,
-			hero.attack, hero.defense, hero.agility, hero.ether, hero.ether_defense, hero.hit, hero.evade] + "\n" + _deathblows_line(hero), Color(1, 1, 1), 660)
+			hero.attack, hero.defense, hero.agility, hero.ether, hero.ether_defense, hero.hit, hero.evade] + "\n" + _deathblows_line(hero)
 		row.add_child(info)
 		var buttons := GridContainer.new()
 		buttons.columns = 2
@@ -2648,43 +2860,43 @@ func _fill_cheat_panel() -> void:
 			var button := _cheat_button(buttons, entry[0], func():
 				var error := _cheat(command)
 				if not error.is_empty():
-					_show_note("Не сделано: " + _cheat_why(error)))
+					_show_note(_t("Не сделано: ") + _cheat_why(error)))
 			button.disabled = not edit
 			cheat_ui.hero_buttons.append(button)
 		if hero.gear >= 0:
-			gears.append("%s: HP %d/%d, топливо %d/%d" % [hero.gear_name, hero.gear_hp, hero.gear_max_hp, hero.fuel, hero.max_fuel])
+			gears.append(_t("%s: HP %d/%d, топливо %d/%d") % [hero.gear_name, hero.gear_hp, hero.gear_max_hp, hero.fuel, hero.max_fuel])
 	if focus_at >= 0 and focus_at < cheat_ui.hero_buttons.size():
 		cheat_ui.hero_buttons[focus_at].grab_focus.call_deferred()
 	if state.party.is_empty():
 		cheat_ui.heroes.add_child(_cheat_label("Партии нет (игра ещё не началась).", Color(0.8, 0.8, 0.8)))
 	cheat_ui.deathblows_party.disabled = not edit or state.party.is_empty()
-	cheat_ui.money_label.text = "Деньги: %d G" % state.gold
+	cheat_ui.money_label.text = _t("Деньги: %d G") % state.gold
 	cheat_ui.money_spin.value = state.gold
 	for control in [cheat_ui.money_spin, cheat_ui.money_set, cheat_ui.money_add, cheat_ui.gears, cheat_ui.item_kind, cheat_ui.item, cheat_ui.item_count, cheat_ui.item_set]:
 		if control is SpinBox:
 			control.editable = edit
 		else:
 			control.disabled = not edit
-	cheat_ui.gears_label.text = "Гиры партии: " + (", ".join(gears) if not gears.is_empty() else "у партии сейчас нет гиров") + "."
+	cheat_ui.gears_label.text = _t("Гиры партии: ") + (", ".join(gears) if not gears.is_empty() else _t("у партии сейчас нет гиров")) + "."
 	cheat_ui.encounters.set_pressed_no_signal(state.encounters_off)
 	cheat_ui.turbo.selected = {1: 0, 2: 1, 4: 2}.get(turbo_always, 0)
 	cheat_ui.win.disabled = not state.can_win
-	cheat_ui.win_label.text = ("Бой: врагов на ногах %d" % state.enemies_left) if state.can_win else ("Исход боя уже решён" if state.in_battle else "Сейчас не бой")
-	cheat_ui.items_note.text = "" if edit else "Сейчас менять нельзя: только на поле и на карте мира."
+	cheat_ui.win_label.text = (_t("Бой: врагов на ногах %d") % state.enemies_left) if state.can_win else _t("Исход боя уже решён" if state.in_battle else "Сейчас не бой")
+	cheat_ui.items_note.text = "" if edit else _t("Сейчас менять нельзя: только на поле и на карте мира.")
 	cheat_ui.items_note.visible = not edit
 	_fill_cheat_items()
 	var held := PackedStringArray()
 	for entry in state.items:
 		held.append("%s ×%d" % [entry[1], entry[2]])
-	cheat_ui.items_held.text = "В сумке (предметы): " + (", ".join(held) if not held.is_empty() else "пусто")
+	cheat_ui.items_held.text = _t("В сумке (предметы): ") + (", ".join(held) if not held.is_empty() else _t("пусто"))
 
 
 ## A hero's Deathblows in a line: how many of its list are learned, the next the game's routine would teach and the level it
 ## asks, how many the story has yet to open (the 7-AP tier).
 func _deathblows_line(hero: Dictionary) -> String:
-	var line := "приёмы: %d из %d" % [hero.deathblows_learned, hero.deathblows_total]
+	var line := _t("приёмы: %d из %d") % [hero.deathblows_learned, hero.deathblows_total]
 	if hero.deathblows_total == 0:
-		return "приёмов у героя нет (бой их не учит)"
+		return _t("приёмов у героя нет (бой их не учит)")
 	var next := ""
 	var closed := 0
 	for entry in hero.deathblows:
@@ -2693,12 +2905,12 @@ func _deathblows_line(hero: Dictionary) -> String:
 		if not entry[5]:
 			closed += 1
 		elif next.is_empty():
-			next = "%s — с ур. %d" % [entry[1], entry[3]]
+			next = _t("%s — с ур. %d") % [entry[1], entry[3]]
 	if not next.is_empty():
-		line += "; следующий: " + next
+		line += _t("; следующий: ") + next
 	if closed > 0:
-		line += "; ещё %d (7 AP) откроет сюжет" % closed
-	return line + "; AP за ход %d" % hero.ap
+		line += _t("; ещё %d (7 AP) откроет сюжет") % closed
+	return line + _t("; AP за ход %d") % hero.ap
 
 
 ## The item list of the chosen kind: every entry the disc names, how many are held (the count's spin box starts there).
@@ -2707,7 +2919,7 @@ func _fill_cheat_items() -> void:
 	var keep := item.get_item_id(item.selected) if item.selected >= 0 else -1
 	item.clear()
 	for entry in core.cheat_items(cheat_ui.item_kind.selected):
-		item.add_item("%s (есть %d)" % [entry[1], entry[2]], entry[0])
+		item.add_item(_t("%s (есть %d)") % [entry[1], entry[2]], entry[0])
 		item.set_item_metadata(item.item_count - 1, entry[2])
 	if item.item_count > 0:
 		var index := maxi(item.get_item_index(keep), 0) if keep >= 0 else 0

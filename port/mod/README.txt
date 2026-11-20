@@ -24,7 +24,8 @@ Without the pack the game runs with the original PlayStation graphics.
 
 2. Run "Play.cmd" (double-click it).
    A black window first checks the Games folder and says which language the game will be in, or what is
-   missing. It prints its lines in Russian; what they mean is listed at the end of this file.
+   missing. It prints its lines in English or Russian (see "Language" under Controls); what the Russian ones mean
+   is listed at the end of this file.
    On the first run the game prepares itself once (from a few seconds to a minute).
    While the game runs the black window stays open — it closes by itself after you quit the game.
    The game starts as on the console: the publisher's notice, the opening movie, the title screen.
@@ -43,8 +44,12 @@ Keyboard: arrows — move; X — Cross (yes, action); Z — Circle (back);
           Q / W — L1 / R1; E / R — L2 / R2.
 Gamepad:  A / B / X / Y — Cross / Circle / Square / Triangle; the D-pad or the left stick;
           LB / RB — L1 / R1; the triggers — L2 / R2; Start / Back — Start / Select.
-F1  — the cheat panel (the game pauses; its labels are in Russian): levels, money, items, HP/EP, deathblows,
-      random battles on/off, turbo.
+F1  — the cheat panel (the game pauses): levels, money, items, HP/EP, deathblows, random battles on/off, turbo,
+      and the "Language / Язык" button.
+Language: the mod's own lines (the F1 panel, the notes over the game, the window's title, the black window) are in
+      English or Russian; the game's text is the one on the disc. The language is chosen by itself: Russian with
+      the Russian disc or a Russian Windows, English otherwise. The F1 panel's "Language / Язык" button switches it
+      in the game (the choice is remembered); Play.cmd ui=en or Play.cmd ui=ru sets it for one run.
 Tab — hold: the game runs 4 times faster (battles, walking; movies and menus stay as they are).
 F4  — win the current battle.
 F2  — light and shadows on/off;  F3 — HD textures on/off;  F11 — full screen / window.
@@ -80,8 +85,8 @@ If the game does not start
 Read what the black window said. Most often: no image in the Games folder, an image of the wrong disc,
 or the video card needs a newer driver. Details are in the logs folder (godot.log).
 
-The black window's lines (it prints them in Russian)
-----------------------------------------------------
+The black window's lines when it prints them in Russian
+-------------------------------------------------------
 "Найден английский диск 1 (Xenogears USA): <file>" / "... игра будет НА АНГЛИЙСКОМ" — the American disc 1 is
     found, the game will be in English (the lines after it only say how to get Russian text: ignore them).
 "Найден диск 1 русского перевода: <file>" / "Игра будет на русском языке." — the Russian translation's disc 1
