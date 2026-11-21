@@ -10,6 +10,10 @@ There are no game images here and there never will be — you need an image of y
 
 ## Video
 
+[![Xenogears HD: Original vs HD](https://img.youtube.com/vi/mI5Y5vibYDw/maxresdefault.jpg)](https://www.youtube.com/watch?v=mI5Y5vibYDw)
+
+[Original vs HD](https://www.youtube.com/watch?v=mI5Y5vibYDw): the same frames side by side, the original on the left and HD on the right (1.5 minutes)
+
 | [![Xenogears HD: all Deathblows of Fei, Citan and Emeralda](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas) | [![Xenogears HD: a walk around Kislev](https://img.youtube.com/vi/Ez5WRn55g5s/hqdefault.jpg)](https://www.youtube.com/watch?v=Ez5WRn55g5s) |
 |:---:|:---:|
 | [All 34 Deathblows of Fei, Citan and Emeralda](https://www.youtube.com/watch?v=cxWjZwgbCas), recorded straight from the game (7 minutes) | [A walk around Kislev](https://www.youtube.com/watch?v=Ez5WRn55g5s): the townspeople in HD |

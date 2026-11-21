@@ -10,6 +10,10 @@ English: [README.md](README.md)
 
 ## Видео
 
+[![Xenogears HD: оригинал и HD](https://img.youtube.com/vi/mI5Y5vibYDw/maxresdefault.jpg)](https://www.youtube.com/watch?v=mI5Y5vibYDw)
+
+[Оригинал и HD](https://www.youtube.com/watch?v=mI5Y5vibYDw): одни и те же кадры рядом, слева оригинал, справа HD (полторы минуты)
+
 | [![Xenogears HD: все смертельные приёмы Фея, Ситана и Эмеральды](https://img.youtube.com/vi/cxWjZwgbCas/hqdefault.jpg)](https://www.youtube.com/watch?v=cxWjZwgbCas) | [![Xenogears HD: прогулка по Кислеву](https://img.youtube.com/vi/Ez5WRn55g5s/hqdefault.jpg)](https://www.youtube.com/watch?v=Ez5WRn55g5s) |
 |:---:|:---:|
 | [Все 34 смертельных приёма Фея, Ситана и Эмеральды](https://www.youtube.com/watch?v=cxWjZwgbCas), запись прямо из игры (7 минут) | [Прогулка по Кислеву](https://www.youtube.com/watch?v=Ez5WRn55g5s): массовка в HD |
